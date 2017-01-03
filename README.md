@@ -1,4 +1,4 @@
-# fflite
+# fflite [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](http://www.gnu.org/licenses/gpl-3.0)
 `fflite` is [FFmpeg](https://www.ffmpeg.org/) wrapper for minimalistic progress visualization while keeping the flexability of CLI use.
 
 ### Apart from less obtrusive CLI output there is added functionality:
