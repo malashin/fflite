@@ -147,13 +147,14 @@ func truncPad(s string, n int, side byte) string {
 
 // argsPreset replaces passed arguments with preset values.
 func argsPreset(input string) []string {
+	var r *regexp.Regexp
 	out := input
-	if regexp.MustCompile(`^\@crf(\d+)$`).MatchString(input) {
-		out = regexp.MustCompile(`^\@crf(\d+)$`).ReplaceAllString(input, "-an -vcodec libx264 -preset medium -crf ${1} -pix_fmt yuv420p -g 0 -map_metadata -1 -map_chapters -1")
-	} else if regexp.MustCompile(`^\@ac(\d+)$`).MatchString(input) {
-		out = regexp.MustCompile(`^\@ac(\d+)$`).ReplaceAllString(input, "-vn -acodec ac3 -ab ${1}k -map_metadata -1 -map_chapters -1")
-	} else if regexp.MustCompile(`^\@nometa$`).MatchString(input) {
-		out = regexp.MustCompile(`^\@nometa$`).ReplaceAllString(input, "-map_metadata -1 -map_chapters -1")
+	if r = regexp.MustCompile(`^\@crf(\d+)$`); r.MatchString(input) {
+		out = r.ReplaceAllString(input, "-an -vcodec libx264 -preset medium -crf ${1} -pix_fmt yuv420p -g 0 -map_metadata -1 -map_chapters -1")
+	} else if r = regexp.MustCompile(`^\@ac(\d+)$`); r.MatchString(input) {
+		out = r.ReplaceAllString(input, "-vn -acodec ac3 -ab ${1}k -map_metadata -1 -map_chapters -1")
+	} else if r = regexp.MustCompile(`^\@nometa$`); r.MatchString(input) {
+		out = r.ReplaceAllString(input, "-map_metadata -1 -map_chapters -1")
 	}
 	return strings.Split(out, " ")
 }
