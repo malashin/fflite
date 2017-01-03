@@ -23,7 +23,7 @@ func main() {
 	var progress, eta, lastLine string
 	var timeSpeed []string
 	var duration, currentSecond, currentSpeed float64
-	var encodingStarted, encodingFinished, streamMapping, sigint = false, false, false, false
+	var encodingStarted, encodingFinished, streamMapping, sigint, errors = false, false, false, false, false
 	var r *regexp.Regexp
 	var startTime time.Time
 
@@ -109,9 +109,19 @@ func main() {
 			eta = secondsToHHMMSS(getETA(currentSpeed, duration, currentSecond))
 			lastLine = r.ReplaceAllString(line, strings.TrimSpace("${1}"+"${2}"))
 			line = r.ReplaceAllString(line, "\x1b[33;1m"+progress+"%\x1b[0m eta="+eta+" "+strings.TrimSpace("${1}"+"${2}")+"\r")
+		} else if r = regexp.MustCompile(`.*Press \[q\] to stop.*`); r.MatchString(line) {
+			line = ""
+		} else if encodingStarted {
+			if !errors {
+				ansi.Print("\n")
+			}
+			errors = true
+			ansi.Printf("\x1b[31;1m" + line + "\x1b[0m\n")
+			continue
 		} else {
 			line = ""
 		}
+		errors = false
 		ansi.Print(line)
 	}
 
