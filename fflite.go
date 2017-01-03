@@ -22,10 +22,12 @@ func main() {
 	// Main variables.
 	var progress, eta, lastLine string
 	var timeSpeed []string
-	var duration, currentSecond, currentSpeed float64
+	var duration, currentSecond, currentSpeed, prevSecond float64
 	var encodingStarted, encodingFinished, streamMapping, sigint, errors = false, false, false, false, false
 	var r *regexp.Regexp
 	var startTime time.Time
+	var prevUptime time.Duration
+	var currentUptime time.Duration
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
@@ -70,6 +72,7 @@ func main() {
 		}
 		if !encodingStarted && regexp.MustCompile(`.*Press \[q\] to stop.*`).MatchString(line) {
 			startTime = time.Now()
+			prevUptime = time.Since(startTime)
 			encodingStarted = true
 			streamMapping = false
 		}
@@ -107,8 +110,21 @@ func main() {
 			currentSpeed, _ = strconv.ParseFloat(timeSpeed[1], 64)
 			progress = truncPad(strconv.FormatInt(int64(currentSecond/(duration/100.0)), 10), 3, 'r')
 			eta = secondsToHHMMSS(getETA(currentSpeed, duration, currentSecond))
-			lastLine = r.ReplaceAllString(line, strings.TrimSpace("${1}"+"${2}"))
-			line = r.ReplaceAllString(line, "\x1b[33;1m"+progress+"%\x1b[0m eta="+eta+" "+strings.TrimSpace("${1}"+"${2}")+"\r")
+			lastLine = strings.TrimSpace(r.ReplaceAllString(line, "${1}${2}"))
+			line = strings.TrimSpace(r.ReplaceAllString(line, "${1}${2}"))
+			line = "\x1b[33;1m" + progress + "%\x1b[0m eta=" + eta + " " + line + "\r"
+		} else if r = regexp.MustCompile(`.* (time=.*) bitrate=.*\/s(.*)`); r.MatchString(line) {
+			currentSecond = hhmmssmsToSeconds(regexp.MustCompile(`.*size=.* time=.*?(\d{2}\:\d{2}\:\d{2}\.\d{2}).*`).ReplaceAllString(line, "$1"))
+			currentUptime = time.Since(startTime)
+			currentSpeed = 0
+			if currentUptime-prevUptime > 0 {
+				currentSpeed = (currentSecond - prevSecond) / (currentUptime - prevUptime).Seconds()
+			}
+			progress = truncPad(strconv.FormatInt(int64(currentSecond/(duration/100.0)), 10), 3, 'r')
+			eta = secondsToHHMMSS(getETA(currentSpeed, duration, currentSecond))
+			lastLine = strings.TrimSpace(r.ReplaceAllString(line, "${1}${2}"))
+			line = strings.TrimSpace(r.ReplaceAllString(line, "${1}${2}"))
+			line = "\x1b[33;1m" + progress + "%\x1b[0m eta=" + eta + " " + line + " speed=" + strconv.FormatFloat(currentSpeed, 'f', 2, 64) + "x\r"
 		} else if r = regexp.MustCompile(`.*Press \[q\] to stop.*`); r.MatchString(line) {
 			line = ""
 		} else if encodingStarted {
