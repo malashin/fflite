@@ -9,7 +9,7 @@
 *It is currently made for personal use and some settings are still hardcoded.*
 
 ## Sample output of `fflite`:
-![fflite](http://i.imgur.com/54BQEfT.png)
+![fflite](http://i.imgur.com/bz0b0Xp.png)
 
 ## Same file in [FFmpeg](https://www.ffmpeg.org/)
 [![ffmpeg](http://i.imgur.com/VJ8Wj48l.png)](http://i.imgur.com/VJ8Wj48.png)
