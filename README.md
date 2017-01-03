@@ -5,8 +5,11 @@
 * Estemated encoding time and progress percentage is shown during encoding.
 * ANSI escape sequences (colors) are supported in Windows terminals (cmd, PowerShell). [go-ansi](https://github.com/k0kubun/go-ansi)
 * Command presets for less typing.
+* BEEP sound at the end of encoding process.
 
-*It is currently made for personal use and some settings are still hardcoded.*
+You need to have [FFmpeg](https://www.ffmpeg.org/) installed and accessable from $PATH environment variable in order to use `fflite`.
+
+*It is currently made for personal use and some settings, like presets, are still hardcoded.*
 
 ## Sample output of `fflite`:
 ![fflite](http://i.imgur.com/bz0b0Xp.png)
