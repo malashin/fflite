@@ -20,10 +20,10 @@ var speedArray []float64
 
 func main() {
 	// Main variables.
-	var progress, eta, lastLine string
+	var progress, eta, lastLine, lastArgs string
 	var timeSpeed []string
 	var duration, currentSecond, currentSpeed, prevSecond float64
-	var encodingStarted, encodingFinished, streamMapping, sigint, errors = false, false, false, false, false
+	var encodingStarted, encodingFinished, streamMapping, sigint, errors, appendArgs = false, false, false, false, false, false
 	var r *regexp.Regexp
 	var startTime time.Time
 	var prevUptime time.Duration
@@ -52,7 +52,24 @@ func main() {
 	ffCommand := []string{"-hide_banner"}
 	for i := 1; i < len(args); i++ {
 		// Parse all arguments and apply presets if needed.
-		ffCommand = append(ffCommand, argsPreset(args[i])...)
+		if !appendArgs {
+			if args[i][0:1] == "\"" {
+				lastArgs += args[i]
+				appendArgs = true
+				continue
+			} else {
+				ffCommand = append(ffCommand, argsPreset(args[i])...)
+			}
+		} else {
+			if args[i][len(args[i])-1:] == "\"" {
+				lastArgs = lastArgs + " " + args[i]
+				lastArgs = strings.Replace(lastArgs, "\"", "", -1)
+				ffCommand = append(ffCommand, lastArgs)
+				appendArgs = false
+			} else {
+				lastArgs = lastArgs + " " + args[i]
+			}
+		}
 	}
 	// Print out the final ffmpeg command.
 	ansi.Print("\x1b[36;1m> \x1b[30;1m" + "ffmpeg " + strings.Join(ffCommand[1:], " ") + "\x1b[0m\n")
