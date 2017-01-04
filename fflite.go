@@ -55,18 +55,18 @@ func main() {
 	// Arguments surrounded by escaped doublequotes are joined.
 	for i := 1; i < len(args); i++ {
 		if !appendArgs {
-			if args[i][0:1] == "\"" {
+			if (args[i][0:1] == "\"") && !(args[i][len(args[i])-1:] == "\"") {
 				lastArgs += args[i]
 				appendArgs = true
-				continue
+			} else if (args[i][0:1] == "\"") && (args[i][len(args[i])-1:] == "\"") {
+				ffCommand = append(ffCommand, argsPreset(strings.Replace(args[i], "\"", "", -1))...)
 			} else {
 				ffCommand = append(ffCommand, argsPreset(args[i])...)
 			}
 		} else {
 			if args[i][len(args[i])-1:] == "\"" {
 				lastArgs = lastArgs + " " + args[i]
-				lastArgs = strings.Replace(lastArgs, "\"", "", -1)
-				ffCommand = append(ffCommand, lastArgs)
+				ffCommand = append(ffCommand, strings.Replace(lastArgs, "\"", "", -1))
 				appendArgs = false
 			} else {
 				lastArgs = lastArgs + " " + args[i]
