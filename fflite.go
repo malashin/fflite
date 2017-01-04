@@ -39,7 +39,8 @@ func main() {
 
 	// Convert passed arguments into array.
 	args := os.Args
-
+	// If program is executed without arguments.
+	// Show usage information.
 	if len(args) <= 1 {
 		ansi.Print("\nfflite is FFmpeg wrapper for minimalistic progress visualization while keeping the flexability of CLI.\n\n")
 		ansi.Print("\x1b[33;1mUsage:\x1b[0m\nfflite [global_options] {[input_file_options] -i input_file} ... {[output_file_options] output_file} ...\n\n")
