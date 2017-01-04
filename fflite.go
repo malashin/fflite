@@ -43,15 +43,17 @@ func main() {
 	// Show usage information.
 	if len(args) <= 1 {
 		ansi.Print("\nfflite is FFmpeg wrapper for minimalistic progress visualization while keeping the flexability of CLI.\n\n")
-		ansi.Print("\x1b[33;1mUsage:\x1b[0m\nfflite [global_options] {[input_file_options] -i input_file} ... {[output_file_options] output_file} ...\n\n")
+		ansi.Print("\x1b[33;1mUsage:\x1b[0m\nfflite [global_options] {[input_file_options] -i input_file} ... {[output_file_options] output_file} ...\n")
+		ansi.Print("In order to pass arguments with spaces in it, surround them with escaped doublequotes \\\"input file\\\".\n\n")
 		ansi.Print("\x1b[33;1mFFmpeg documentation:\x1b[0m\nwww.ffmpeg.org/ffmpeg-all.html\n\n")
 		ansi.Print("\x1b[33;1mGithub page:\x1b[0m\ngithub.com/malashin/fflite\n")
 		os.Exit(0)
 	}
 	// Use "-hide_banner" as default.
 	ffCommand := []string{"-hide_banner"}
+	// Parse all arguments and apply presets if needed.
+	// Arguments surrounded by escaped doublequotes are joined.
 	for i := 1; i < len(args); i++ {
-		// Parse all arguments and apply presets if needed.
 		if !appendArgs {
 			if args[i][0:1] == "\"" {
 				lastArgs += args[i]
