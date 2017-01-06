@@ -2,7 +2,7 @@
 `fflite` is [FFmpeg](https://www.ffmpeg.org/) wrapper for minimalistic progress visualization while keeping the flexability of CLI.
 
 **Same syntax as in [FFmpeg](https://www.ffmpeg.org/):**
-`fflite [global_options] {[input_file_options] -i input_file}...{[output_file_options] output_file}...`
+```fflite [global_options] {[input_file_options] -i input_file} ... {[output_file_options] output_file} ...```
 [FFmpeg documentation](https://www.ffmpeg.org/ffmpeg-all.html)
 
 ### Apart from less obtrusive CLI output there is added functionality:
