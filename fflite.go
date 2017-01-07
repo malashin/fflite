@@ -17,6 +17,7 @@ var speedArray []float64
 func main() {
 	// Main variables.
 	var lastArgs, batchInputName, basename string
+	var errorsArray, errors []string
 	var batchInputIndex int
 	var sigint, appendArgs = false, false
 
@@ -104,14 +105,34 @@ func main() {
 					}
 					// Replace batch input file with filename.
 					batchCommand[batchInputIndex] = file
-					ansi.Print("\n\x1b[32;1mFILE " + strconv.FormatInt(int64(i)+1, 10) + " of " + strconv.FormatInt(int64(batchArrayLength), 10) + "\x1b[0m\n")
-					encodeFile(batchCommand, true)
+					ansi.Print("\n\x1b[42;1mINPUT " + strconv.FormatInt(int64(i)+1, 10) + " of " + strconv.FormatInt(int64(batchArrayLength), 10) + "\x1b[0m\n")
+					errors = encodeFile(batchCommand, true)
+					// Append errors to errorsArray
+					if len(errors) > 0 {
+						if len(errorsArray) != 0 {
+							errorsArray = append(errorsArray, "\n")
+						}
+						errorsArray = append(errorsArray, "\x1b[42;1mINPUT "+strconv.FormatInt(int64(i)+1, 10)+":\x1b[0m\x1b[32;1m "+file+"\x1b[0m\n")
+						errorsArray = append(errorsArray, errors...)
+					}
+					// Reset the speedArray and errors
+					speedArray = []float64{}
+					errors = []string{}
 				}
 			}
 			// Play bell sound.
 			ansi.Print("\x07")
 		}
 	} else {
-		encodeFile(ffCommand, false)
+		errors := encodeFile(ffCommand, false)
+		errorsArray = append(errorsArray, errors...)
+	}
+
+	// Print out all errors
+	if len(errorsArray) > 0 {
+		ansi.Print("\n\x1b[41;1mERROR LOG:\x1b[0m\n")
+		for _, v := range errorsArray {
+			ansi.Print(v)
+		}
 	}
 }

@@ -3,10 +3,10 @@
 
 ### Apart from less obtrusive CLI output there is added functionality:
 * Estemated encoding time and progress percentage is shown during encoding.
-* ANSI escape sequences (colors) are supported in Windows terminals (cmd, PowerShell). [go-ansi](https://github.com/k0kubun/go-ansi)
 * Batch execution if `.txt` file is passed as input file.
 * Command presets for less typing.
 * BEEP sound at the end of encoding process.
+* ANSI escape sequences (colors) are supported in Windows terminals (cmd, PowerShell). [go-ansi](https://github.com/k0kubun/go-ansi)
 
 ### Same syntax as in [FFmpeg](https://www.ffmpeg.org/):
 ```

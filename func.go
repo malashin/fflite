@@ -198,9 +198,9 @@ func argsPreset(input string) []string {
 
 // encodeFile starts ffmpeg command witch passed arguments in ffCommand []string array.
 // If batchMode is true BELL sound is turned off.
-func encodeFile(ffCommand []string, batchMode bool) {
-	var progress, eta, lastLine string
-	var timeSpeed []string
+func encodeFile(ffCommand []string, batchMode bool) []string {
+	var progress, eta, lastLine, lastLineUsed string
+	var timeSpeed, errorsArray []string
 	var duration, currentSecond, currentSpeed, prevSecond float64
 	var encodingStarted, encodingFinished, streamMapping, sigint, errors = false, false, false, false, false
 	var r *regexp.Regexp
@@ -300,10 +300,16 @@ func encodeFile(ffCommand []string, batchMode bool) {
 		} else if r = regexp.MustCompile(`.*Press \[q\] to stop.*`); r.MatchString(line) {
 			line = ""
 		} else if encodingStarted {
-			if !errors {
+			if !errors && lastLine != "" {
 				ansi.Print("\n")
 			}
 			errors = true
+			// Add timecode and errors to array.
+			if lastLineUsed != lastLine {
+				lastLineUsed = lastLine
+				errorsArray = append(errorsArray, "\x1b[33;1m"+progress+"%\x1b[0m "+lastLine+"\n")
+			}
+			errorsArray = append(errorsArray, "\x1b[31;1m"+line+"\x1b[0m\n")
 			ansi.Printf("\x1b[31;1m" + line + "\x1b[0m\n")
 			continue
 		} else {
@@ -318,4 +324,6 @@ func encodeFile(ffCommand []string, batchMode bool) {
 		// Play bell sound.
 		ansi.Print("\x07")
 	}
+
+	return errorsArray
 }
