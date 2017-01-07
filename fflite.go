@@ -99,7 +99,7 @@ func main() {
 					copy(batchCommand, ffCommand)
 					// Append basename to each output file.
 					for i := 1; i < len(batchCommand); i++ {
-						if !(strings.HasPrefix(batchCommand[i], "-")) && !(strings.HasPrefix(batchCommand[i-1], "-")) {
+						if !(strings.HasPrefix(batchCommand[i], "-")) && (!(strings.HasPrefix(batchCommand[i-1], "-")) || batchCommand[i-1] == "-1") {
 							batchCommand[i] = basename + "_" + batchCommand[i]
 						}
 					}
