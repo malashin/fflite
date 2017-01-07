@@ -1,16 +1,12 @@
 package main
 
 import (
-	"bufio"
-	"log"
 	"os"
-	"os/exec"
 	"os/signal"
-	"regexp"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
-	"time"
 
 	ansi "github.com/k0kubun/go-ansi"
 )
@@ -20,15 +16,11 @@ var speedArray []float64
 
 func main() {
 	// Main variables.
-	var progress, eta, lastLine, lastArgs string
-	var timeSpeed []string
-	var duration, currentSecond, currentSpeed, prevSecond float64
-	var encodingStarted, encodingFinished, streamMapping, sigint, errors, appendArgs = false, false, false, false, false, false
-	var r *regexp.Regexp
-	var startTime time.Time
-	var prevUptime time.Duration
-	var currentUptime time.Duration
+	var lastArgs, batchInputName, basename string
+	var batchInputIndex int
+	var sigint, appendArgs = false, false
 
+	// Intercept Interrupt signal
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 
@@ -49,11 +41,20 @@ func main() {
 		ansi.Print("\x1b[33;1mGithub page:\x1b[0m\ngithub.com/malashin/fflite\n")
 		os.Exit(0)
 	}
+	// Create slice containing arguments of ffmpeg command.
 	// Use "-hide_banner" as default.
 	ffCommand := []string{"-hide_banner"}
 	// Parse all arguments and apply presets if needed.
 	// Arguments surrounded by escaped doublequotes are joined.
 	for i := 1; i < len(args); i++ {
+		if (args[i] == "-i") && (strings.HasSuffix(args[i+1], ".txt")) {
+			if batchInputName == "" {
+				batchInputName = args[i+1]
+			} else {
+				ansi.Print("\x1b[31;1mOnly one .txt file is allowed for batch execution.\x1b[0m\n")
+				os.Exit(1)
+			}
+		}
 		if !appendArgs {
 			if (args[i][0:1] == "\"") && !(args[i][len(args[i])-1:] == "\"") {
 				lastArgs += args[i]
@@ -73,105 +74,44 @@ func main() {
 			}
 		}
 	}
-	// Print out the final ffmpeg command.
-	ansi.Print("\x1b[36;1m> \x1b[30;1m" + "ffmpeg " + strings.Join(ffCommand[1:], " ") + "\x1b[0m\n")
-	// Create exec command to start ffmpeg with.
-	cmd := exec.Command("ffmpeg", ffCommand...)
-	// Pipe stderr (default ffmpeg info channel) to terminal.
-	stderr, err := cmd.StderrPipe()
-	if err != nil {
-		log.Panic(err)
-	}
-	// Pipe terminals stdin to executed ffmpeg instance.
-	// Used for answering ffmpegs questions.
-	cmd.Stdin = os.Stdin
-	// Start ffmpeg.
-	cmd.Start()
-	// Buffer all the messages coming from ffmpegs stderr.
-	scanner := bufio.NewScanner(stderr)
-	// Split the lines on `\r?\n`, '\r', "[y/N]".
-	scanner.Split(scanLines)
-	// For each line.
-	for scanner.Scan() {
-		line := scanner.Text()
-		// Check the state of the program.
-		if !encodingStarted && regexp.MustCompile(`Stream mapping:`).MatchString(line) {
-			streamMapping = true
-		}
-		if !encodingStarted && regexp.MustCompile(`.*Press \[q\] to stop.*`).MatchString(line) {
-			startTime = time.Now()
-			prevUptime = time.Since(startTime)
-			encodingStarted = true
-			streamMapping = false
-		}
-		if encodingStarted && regexp.MustCompile(`.*video:.*audio.*subtitle.*other streams.*global headers.*`).MatchString(line) {
-			ansi.Print(strings.Repeat(" ", len(line)) + "\r")
-			if sigint {
-				ansi.Print("\x1b[31;1m" + progress + "%\x1b[0m " + lastLine + "\n")
-				ansi.Print("\x1b[31;1mSIGINT\x1b[0m\n")
-			} else {
-				ansi.Print("\x1b[32;1m100%\x1b[0m et=" + secondsToHHMMSS(strconv.FormatFloat(time.Since(startTime).Seconds(), 'f', -1, 64)) + " " + lastLine + "\n")
+	// If .txt file is passed as input start batch process.
+	// .txt input will be replaced with each line from that file.
+	if batchInputName != "" {
+		// Get index of batch file.
+		batchInputIndex = stringIndexInSlice(ffCommand, batchInputName)
+		if batchInputIndex != -1 {
+			// Create array of files from batch file.
+			batchArray, err := readLines(batchInputName)
+			if err != nil {
+				ansi.Print("\x1b[31;1m")
+				ansi.Print(err)
+				ansi.Print("\x1b[0m\n")
+				os.Exit(1)
 			}
-			encodingStarted = false
-			encodingFinished = true
-		}
-		// Print out stream mapping information.
-		if streamMapping {
-			ansi.Print("\x1b[30;1m  " + line + "\x1b[0m\n")
-			continue
-		}
-		// Modify the lines using regexp.
-		if r = regexp.MustCompile(`Input #(\d+),.*from \'(.*)\'\:`); r.MatchString(line) {
-			line = r.ReplaceAllString(line, "\x1b[32m  INPUT ${1}:\x1b[0m \x1b[32;1m${2}\x1b[0m\n")
-		} else if r = regexp.MustCompile(`Output #(\d+),.*to \'(.*)\'\:`); r.MatchString(line) {
-			line = r.ReplaceAllString(line, "\x1b[33m  OUTPUT ${1}:\x1b[0m \x1b[33;1m${2}\x1b[0m\n")
-		} else if r = regexp.MustCompile(`.*(Duration.*)`); r.MatchString(line) {
-			duration = hhmmssmsToSeconds(regexp.MustCompile(`.*Duration: (\d{2}\:\d{2}\:\d{2}\.\d{2}).*`).ReplaceAllString(line, "${1}"))
-			line = r.ReplaceAllString(line, "  ${1}\n")
-		} else if r = regexp.MustCompile(`.*Stream #(\d+\:\d+)(.*?):(.*)`); r.MatchString(line) {
-			line = r.ReplaceAllString(line, "    \x1b[36;1m${1}\x1b[0m \x1b[30;1m"+strings.ToUpper("${2}")+"\x1b[0m${3}\n")
-		} else if r = regexp.MustCompile(`(.*No such file.*|.*Invalid data.*|.*At least one output file must be specified.*|.*Unrecognized option.*|.*Option not found.*|.*matches no streams.*|.*not supported.*|.*Invalid argument.*|.*Error.*|.*not exist.*|.*-vf\/-af\/-filter.*|.*No such filter.*|.*does not contain.*|.*Not overwriting - exiting.*|.*\[y\/N\].*)`); r.MatchString(line) {
-			line = r.ReplaceAllString(line, "\x1b[31;1m${1}\x1b[0m\n")
-		} else if r = regexp.MustCompile(`.* (time=.*) bitrate=.*\/s(.*speed=.*)`); r.MatchString(line) {
-			timeSpeed = strings.Split(regexp.MustCompile(`.* time=.*?(\d{2}\:\d{2}\:\d{2}\.\d{2}).* speed=.*?(\d+\.\d+|\d+)x`).ReplaceAllString(line, "$1 $2"), " ")
-			currentSecond = hhmmssmsToSeconds(timeSpeed[0])
-			currentSpeed, _ = strconv.ParseFloat(timeSpeed[1], 64)
-			progress = truncPad(strconv.FormatInt(int64(currentSecond/(duration/100.0)), 10), 3, 'r')
-			eta = secondsToHHMMSS(getETA(currentSpeed, duration, currentSecond))
-			lastLine = strings.TrimSpace(r.ReplaceAllString(line, "${1}${2}"))
-			line = strings.TrimSpace(r.ReplaceAllString(line, "${1}${2}"))
-			line = "\x1b[33;1m" + progress + "%\x1b[0m eta=" + eta + " " + line + "\r"
-		} else if r = regexp.MustCompile(`.* (time=.*) bitrate=.*\/s(.*)`); r.MatchString(line) {
-			currentSecond = hhmmssmsToSeconds(regexp.MustCompile(`.*size=.* time=.*?(\d{2}\:\d{2}\:\d{2}\.\d{2}).*`).ReplaceAllString(line, "$1"))
-			currentUptime = time.Since(startTime)
-			currentSpeed = 0
-			if currentUptime-prevUptime > 0 {
-				currentSpeed = (currentSecond - prevSecond) / (currentUptime - prevUptime).Seconds()
+			batchArrayLength := len(batchArray)
+			// For each file.
+			for i, file := range batchArray {
+				if !sigint {
+					// Strip extension.
+					basename = file[0 : len(file)-len(filepath.Ext(file))]
+					batchCommand := make([]string, len(ffCommand), (cap(ffCommand)+1)*2)
+					copy(batchCommand, ffCommand)
+					// Append basename to each output file.
+					for i := 1; i < len(batchCommand); i++ {
+						if !(strings.HasPrefix(batchCommand[i], "-")) && !(strings.HasPrefix(batchCommand[i-1], "-")) {
+							batchCommand[i] = basename + "_" + batchCommand[i]
+						}
+					}
+					// Replace batch input file with filename.
+					batchCommand[batchInputIndex] = file
+					ansi.Print("\n\x1b[32;1mFILE " + strconv.FormatInt(int64(i)+1, 10) + " of " + strconv.FormatInt(int64(batchArrayLength), 10) + "\x1b[0m\n")
+					encodeFile(batchCommand, true)
+				}
 			}
-			progress = truncPad(strconv.FormatInt(int64(currentSecond/(duration/100.0)), 10), 3, 'r')
-			eta = secondsToHHMMSS(getETA(currentSpeed, duration, currentSecond))
-			lastLine = strings.TrimSpace(r.ReplaceAllString(line, "${1}${2}"))
-			line = strings.TrimSpace(r.ReplaceAllString(line, "${1}${2}"))
-			line = "\x1b[33;1m" + progress + "%\x1b[0m eta=" + eta + " " + line + " speed=" + strconv.FormatFloat(currentSpeed, 'f', 2, 64) + "x\r"
-		} else if r = regexp.MustCompile(`.*Press \[q\] to stop.*`); r.MatchString(line) {
-			line = ""
-		} else if encodingStarted {
-			if !errors {
-				ansi.Print("\n")
-			}
-			errors = true
-			ansi.Printf("\x1b[31;1m" + line + "\x1b[0m\n")
-			continue
-		} else {
-			line = ""
+			// Play bell sound.
+			ansi.Print("\x07")
 		}
-		errors = false
-		ansi.Print(line)
-	}
-
-	// If at least one file was encoded.
-	if encodingFinished {
-		// Play bell sound before exiting.
-		ansi.Print("\x07")
+	} else {
+		encodeFile(ffCommand, false)
 	}
 }
