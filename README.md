@@ -8,7 +8,7 @@
 * BEEP sound at the end of encoding process.
 * ANSI escape sequences (colors) are supported in Windows terminals (cmd, PowerShell). [go-ansi](https://github.com/k0kubun/go-ansi)
 
-### Same syntax as in [FFmpeg](https://www.ffmpeg.org/):
+### Same syntax as [FFmpeg](https://www.ffmpeg.org/):
 ```
 fflite [global_options] {[input_file_options] -i input_file} ... {[output_file_options] output_file} ...
 ```
