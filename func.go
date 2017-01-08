@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"bytes"
-	"fmt"
 	"log"
 	"math"
 	"os"
@@ -183,13 +182,6 @@ func readLines(path string) ([]string, error) {
 	return lines, scanner.Err()
 }
 
-// consoleWrite hides the cursor before writing to console stdout.
-func consoleWrite(input interface{}) {
-	fmt.Print("\x1b[?25l")
-	ansi.Print(input)
-	fmt.Print("\x1b[?25h")
-}
-
 // argsPreset replaces passed arguments with preset values.
 func argsPreset(input string) []string {
 	var r *regexp.Regexp
@@ -226,7 +218,7 @@ func encodeFile(ffCommand []string, batchMode bool) []string {
 	}()
 
 	// Print out the final ffmpeg command.
-	consoleWrite("\x1b[36;1m> \x1b[30;1m" + "ffmpeg " + strings.Join(ffCommand[1:], " ") + "\x1b[0m\n")
+	ansi.Print("\x1b[36;1m> \x1b[30;1m" + "ffmpeg " + strings.Join(ffCommand[1:], " ") + "\x1b[0m\n")
 	// Create exec command to start ffmpeg with.
 	cmd := exec.Command("ffmpeg", ffCommand...)
 	// Pipe stderr (default ffmpeg info channel) to terminal.
@@ -257,19 +249,19 @@ func encodeFile(ffCommand []string, batchMode bool) []string {
 			streamMapping = false
 		}
 		if encodingStarted && regexp.MustCompile(`.*video:.*audio.*subtitle.*other streams.*global headers.*`).MatchString(line) {
-			consoleWrite(strings.Repeat(" ", len(line)) + "\r")
+			ansi.Print(strings.Repeat(" ", len(line)) + "\r")
 			if sigint {
-				consoleWrite("\x1b[31;1m" + progress + "%\x1b[0m " + lastLine + "\n")
-				consoleWrite("\x1b[31;1mSIGINT\x1b[0m\n")
+				ansi.Print("\x1b[31;1m" + progress + "%\x1b[0m " + lastLine + "\n")
+				ansi.Print("\x1b[31;1mSIGINT\x1b[0m\n")
 			} else {
-				consoleWrite("\x1b[32;1m100%\x1b[0m et=" + secondsToHHMMSS(strconv.FormatFloat(time.Since(startTime).Seconds(), 'f', -1, 64)) + " " + lastLine + "\n")
+				ansi.Print("\x1b[32;1m100%\x1b[0m et=" + secondsToHHMMSS(strconv.FormatFloat(time.Since(startTime).Seconds(), 'f', -1, 64)) + " " + lastLine + "\n")
 			}
 			encodingStarted = false
 			encodingFinished = true
 		}
 		// Print out stream mapping information.
 		if streamMapping {
-			consoleWrite("\x1b[30;1m  " + line + "\x1b[0m\n")
+			ansi.Print("\x1b[30;1m  " + line + "\x1b[0m\n")
 			continue
 		}
 		// Modify the lines using regexp.
@@ -309,7 +301,7 @@ func encodeFile(ffCommand []string, batchMode bool) []string {
 			line = ""
 		} else if encodingStarted {
 			if !errors && lastLine != "" {
-				consoleWrite("\n")
+				ansi.Print("\n")
 			}
 			errors = true
 			// Add timecode and errors to array.
@@ -318,19 +310,19 @@ func encodeFile(ffCommand []string, batchMode bool) []string {
 				errorsArray = append(errorsArray, "\x1b[33;1m"+progress+"%\x1b[0m "+lastLine+"\n")
 			}
 			errorsArray = append(errorsArray, "\x1b[31;1m"+line+"\x1b[0m\n")
-			consoleWrite("\x1b[31;1m" + line + "\x1b[0m\n")
+			ansi.Print("\x1b[31;1m" + line + "\x1b[0m\n")
 			continue
 		} else {
 			line = ""
 		}
 		errors = false
-		consoleWrite(line)
+		ansi.Print(line)
 	}
 
 	// If at least one file was encoded.
 	if encodingFinished && !batchMode {
 		// Play bell sound.
-		consoleWrite("\x07")
+		ansi.Print("\x07")
 	}
 
 	return errorsArray

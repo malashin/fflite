@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+
+	ansi "github.com/k0kubun/go-ansi"
 )
 
 // Global variables.
@@ -33,12 +35,12 @@ func main() {
 	// If program is executed without arguments.
 	// Show usage information.
 	if len(args) <= 1 {
-		consoleWrite("  fflite is FFmpeg wrapper for minimalistic progress visualization while keeping the flexability of CLI.\n\n")
-		consoleWrite("\x1b[33;1mUsage:\x1b[0m\n  It uses the same syntax as FFmpeg:\n\n")
-		consoleWrite("  fflite [global_options] {[input_file_options] -i input_file} ... {[output_file_options] output_file} ...\n\n")
-		consoleWrite("  In order to pass arguments with spaces in it, surround them with escaped doublequotes \\\"input file\\\".\n\n")
-		consoleWrite("\x1b[33;1mFFmpeg documentation:\x1b[0m\n  www.ffmpeg.org/ffmpeg-all.html\n\n")
-		consoleWrite("\x1b[33;1mGithub page:\x1b[0m\n  github.com/malashin/fflite\n\n")
+		ansi.Print("  fflite is FFmpeg wrapper for minimalistic progress visualization while keeping the flexability of CLI.\n\n")
+		ansi.Print("\x1b[33;1mUsage:\x1b[0m\n  It uses the same syntax as FFmpeg:\n\n")
+		ansi.Print("  fflite [global_options] {[input_file_options] -i input_file} ... {[output_file_options] output_file} ...\n\n")
+		ansi.Print("  In order to pass arguments with spaces in it, surround them with escaped doublequotes \\\"input file\\\".\n\n")
+		ansi.Print("\x1b[33;1mFFmpeg documentation:\x1b[0m\n  www.ffmpeg.org/ffmpeg-all.html\n\n")
+		ansi.Print("\x1b[33;1mGithub page:\x1b[0m\n  github.com/malashin/fflite\n\n")
 		os.Exit(0)
 	}
 	// Create slice containing arguments of ffmpeg command.
@@ -51,7 +53,7 @@ func main() {
 			if batchInputName == "" {
 				batchInputName = args[i+1]
 			} else {
-				consoleWrite("\x1b[31;1mOnly one .txt file is allowed for batch execution.\x1b[0m\n")
+				ansi.Print("\x1b[31;1mOnly one .txt file is allowed for batch execution.\x1b[0m\n")
 				os.Exit(1)
 			}
 		}
@@ -83,9 +85,9 @@ func main() {
 			// Create array of files from batch file.
 			batchArray, err := readLines(batchInputName)
 			if err != nil {
-				consoleWrite("\x1b[31;1m")
-				consoleWrite(err)
-				consoleWrite("\x1b[0m\n")
+				ansi.Print("\x1b[31;1m")
+				ansi.Print(err)
+				ansi.Print("\x1b[0m\n")
 				os.Exit(1)
 			}
 			batchArrayLength := len(batchArray)
@@ -104,7 +106,7 @@ func main() {
 					}
 					// Replace batch input file with filename.
 					batchCommand[batchInputIndex] = file
-					consoleWrite("\n\x1b[42;1mINPUT " + strconv.FormatInt(int64(i)+1, 10) + " of " + strconv.FormatInt(int64(batchArrayLength), 10) + "\x1b[0m\n")
+					ansi.Print("\n\x1b[42;1mINPUT " + strconv.FormatInt(int64(i)+1, 10) + " of " + strconv.FormatInt(int64(batchArrayLength), 10) + "\x1b[0m\n")
 					errors = encodeFile(batchCommand, true)
 					// Append errors to errorsArray
 					if len(errors) > 0 {
@@ -120,7 +122,7 @@ func main() {
 				}
 			}
 			// Play bell sound.
-			consoleWrite("\x07")
+			ansi.Print("\x07")
 		}
 	} else {
 		errors := encodeFile(ffCommand, false)
@@ -129,9 +131,9 @@ func main() {
 
 	// Print out all errors
 	if len(errorsArray) > 0 {
-		consoleWrite("\n\x1b[41;1mERROR LOG:\x1b[0m\n")
+		ansi.Print("\n\x1b[41;1mERROR LOG:\x1b[0m\n")
 		for _, v := range errorsArray {
-			consoleWrite(v)
+			ansi.Print(v)
 		}
 	}
 }
