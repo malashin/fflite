@@ -182,6 +182,21 @@ func readLines(path string) ([]string, error) {
 	return lines, scanner.Err()
 }
 
+// help returns usage information and programm version.
+func help() {
+	ansi.Print("fflite is FFmpeg wrapper for minimalistic progress visualization while keeping the flexability of CLI.\n")
+	ansi.Print("fflite version " + version + ".\n")
+	ansi.Print("\nUsage:\n\n")
+	ansi.Print("        It uses the same syntax as FFmpeg:\n")
+	ansi.Print("        fflite [global_options] {[input_file_options] -i input_file} ... {[output_file_options] output_file} ...\n")
+	ansi.Print("        In order to pass arguments with spaces in it, surround them with escaped doublequotes \\\"input file\\\".\n")
+	ansi.Print("        For batch execution pass \".txt\" file as input.\n")
+	ansi.Print("\nFFmpeg documentation:\n\n")
+	ansi.Print("        www.ffmpeg.org/ffmpeg-all.html\n")
+	ansi.Print("\nGithub page:\n\n")
+	ansi.Print("        github.com/malashin/fflite\n")
+}
+
 // argsPreset replaces passed arguments with preset values.
 func argsPreset(input string) []string {
 	var r *regexp.Regexp

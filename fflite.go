@@ -12,6 +12,7 @@ import (
 )
 
 // Global variables.
+var version = "v0.1.0"
 var speedArray []float64
 
 func main() {
@@ -20,27 +21,19 @@ func main() {
 	var errorsArray, errors []string
 	var batchInputIndex int
 	var sigint, appendArgs = false, false
-
-	// Intercept Interrupt signal
+	// Intercept interrupt signal
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-
 	go func() {
 		<-c
 		sigint = true
 	}()
-
 	// Convert passed arguments into array.
 	args := os.Args
 	// If program is executed without arguments.
-	// Show usage information.
 	if len(args) <= 1 {
-		ansi.Print("  fflite is FFmpeg wrapper for minimalistic progress visualization while keeping the flexability of CLI.\n\n")
-		ansi.Print("\x1b[33;1mUsage:\x1b[0m\n  It uses the same syntax as FFmpeg:\n\n")
-		ansi.Print("  fflite [global_options] {[input_file_options] -i input_file} ... {[output_file_options] output_file} ...\n\n")
-		ansi.Print("  In order to pass arguments with spaces in it, surround them with escaped doublequotes \\\"input file\\\".\n\n")
-		ansi.Print("\x1b[33;1mFFmpeg documentation:\x1b[0m\n  www.ffmpeg.org/ffmpeg-all.html\n\n")
-		ansi.Print("\x1b[33;1mGithub page:\x1b[0m\n  github.com/malashin/fflite\n\n")
+		// Show usage information.
+		help()
 		os.Exit(0)
 	}
 	// Create slice containing arguments of ffmpeg command.
