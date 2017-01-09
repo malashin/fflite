@@ -184,9 +184,9 @@ func readLines(path string) ([]string, error) {
 
 // consolePrint prints str to console while cursor is hidden
 func consolePrint(str interface{}) {
-	ansi.Print("\x1b[?25l")
+	ansi.CursorHide()
 	ansi.Print(str)
-	ansi.Print("\x1b[?25h")
+	ansi.CursorShow()
 }
 
 // help returns usage information and programm version.

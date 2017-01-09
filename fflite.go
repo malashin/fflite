@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+
+	ansi "github.com/k0kubun/go-ansi"
 )
 
 // Global variables.
@@ -99,7 +101,7 @@ func main() {
 					batchCommand[batchInputIndex] = file
 					consolePrint("\n\x1b[42;1mINPUT " + strconv.FormatInt(int64(i)+1, 10) + " of " + strconv.FormatInt(int64(batchArrayLength), 10) + "\x1b[0m\n")
 					errors = encodeFile(batchCommand, true)
-					// Append errors to errorsArray
+					// Append errors to errorsArray.
 					if len(errors) > 0 {
 						if len(errorsArray) != 0 {
 							errorsArray = append(errorsArray, "\n")
@@ -107,7 +109,7 @@ func main() {
 						errorsArray = append(errorsArray, "\x1b[42;1mINPUT "+strconv.FormatInt(int64(i)+1, 10)+":\x1b[0m\x1b[32;1m "+file+"\x1b[0m\n")
 						errorsArray = append(errorsArray, errors...)
 					}
-					// Reset the speedArray and errors
+					// Reset the speedArray and errors.
 					speedArray = []float64{}
 					errors = []string{}
 				}
@@ -120,11 +122,14 @@ func main() {
 		errorsArray = append(errorsArray, errors...)
 	}
 
-	// Print out all errors
+	// Print out all errors.
 	if len(errorsArray) > 0 {
 		consolePrint("\n\x1b[41;1mERROR LOG:\x1b[0m\n")
 		for _, v := range errorsArray {
 			consolePrint(v)
 		}
 	}
+
+	// Show cursor in case its hidden before exit.
+	ansi.CursorShow()
 }
