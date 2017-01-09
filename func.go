@@ -182,19 +182,26 @@ func readLines(path string) ([]string, error) {
 	return lines, scanner.Err()
 }
 
+// consolePrint prints str to console while cursor is hidden
+func consolePrint(str interface{}) {
+	ansi.Print("\x1b[?25l")
+	ansi.Print(str)
+	ansi.Print("\x1b[?25h")
+}
+
 // help returns usage information and programm version.
 func help() {
-	ansi.Print("fflite is FFmpeg wrapper for minimalistic progress visualization while keeping the flexability of CLI.\n")
-	ansi.Print("fflite version " + version + ".\n")
-	ansi.Print("\nUsage:\n\n")
-	ansi.Print("        It uses the same syntax as FFmpeg:\n")
-	ansi.Print("        fflite [global_options] {[input_file_options] -i input_file} ... {[output_file_options] output_file} ...\n")
-	ansi.Print("        In order to pass arguments with spaces in it, surround them with escaped doublequotes \\\"input file\\\".\n")
-	ansi.Print("        For batch execution pass \".txt\" file as input.\n")
-	ansi.Print("\nFFmpeg documentation:\n\n")
-	ansi.Print("        www.ffmpeg.org/ffmpeg-all.html\n")
-	ansi.Print("\nGithub page:\n\n")
-	ansi.Print("        github.com/malashin/fflite\n")
+	consolePrint("fflite is FFmpeg wrapper for minimalistic progress visualization while keeping the flexability of CLI.\n")
+	consolePrint("fflite version " + version + ".\n")
+	consolePrint("\nUsage:\n\n")
+	consolePrint("        It uses the same syntax as FFmpeg:\n")
+	consolePrint("        fflite [global_options] {[input_file_options] -i input_file} ... {[output_file_options] output_file} ...\n")
+	consolePrint("        In order to pass arguments with spaces in it, surround them with escaped doublequotes \\\"input file\\\".\n")
+	consolePrint("        For batch execution pass \".txt\" file as input.\n")
+	consolePrint("\nFFmpeg documentation:\n\n")
+	consolePrint("        www.ffmpeg.org/ffmpeg-all.html\n")
+	consolePrint("\nGithub page:\n\n")
+	consolePrint("        github.com/malashin/fflite\n")
 }
 
 // argsPreset replaces passed arguments with preset values.
@@ -233,7 +240,7 @@ func encodeFile(ffCommand []string, batchMode bool) []string {
 	}()
 
 	// Print out the final ffmpeg command.
-	ansi.Print("\x1b[36;1m> \x1b[30;1m" + "ffmpeg " + strings.Join(ffCommand[1:], " ") + "\x1b[0m\n")
+	consolePrint("\x1b[36;1m> \x1b[30;1m" + "ffmpeg " + strings.Join(ffCommand[1:], " ") + "\x1b[0m\n")
 	// Create exec command to start ffmpeg with.
 	cmd := exec.Command("ffmpeg", ffCommand...)
 	// Pipe stderr (default ffmpeg info channel) to terminal.
@@ -264,19 +271,19 @@ func encodeFile(ffCommand []string, batchMode bool) []string {
 			streamMapping = false
 		}
 		if encodingStarted && regexp.MustCompile(`.*video:.*audio.*subtitle.*other streams.*global headers.*`).MatchString(line) {
-			ansi.Print(strings.Repeat(" ", len(line)) + "\r")
+			consolePrint(strings.Repeat(" ", len(line)) + "\r")
 			if sigint {
-				ansi.Print("\x1b[31;1m" + progress + "%\x1b[0m " + lastLine + "\n")
-				ansi.Print("\x1b[31;1mSIGINT\x1b[0m\n")
+				consolePrint("\x1b[31;1m" + progress + "%\x1b[0m " + lastLine + "\n")
+				consolePrint("\x1b[31;1mSIGINT\x1b[0m\n")
 			} else {
-				ansi.Print("\x1b[32;1m100%\x1b[0m et=" + secondsToHHMMSS(strconv.FormatFloat(time.Since(startTime).Seconds(), 'f', -1, 64)) + " " + lastLine + "\n")
+				consolePrint("\x1b[32;1m100%\x1b[0m et=" + secondsToHHMMSS(strconv.FormatFloat(time.Since(startTime).Seconds(), 'f', -1, 64)) + " " + lastLine + "\n")
 			}
 			encodingStarted = false
 			encodingFinished = true
 		}
 		// Print out stream mapping information.
 		if streamMapping {
-			ansi.Print("\x1b[30;1m  " + line + "\x1b[0m\n")
+			consolePrint("\x1b[30;1m  " + line + "\x1b[0m\n")
 			continue
 		}
 		// Modify the lines using regexp.
@@ -317,7 +324,7 @@ func encodeFile(ffCommand []string, batchMode bool) []string {
 			line = ""
 		} else if encodingStarted {
 			if !errors && lastLine != "" {
-				ansi.Print("\n")
+				consolePrint("\n")
 			}
 			errors = true
 			// Add timecode and errors to array.
@@ -326,19 +333,19 @@ func encodeFile(ffCommand []string, batchMode bool) []string {
 				errorsArray = append(errorsArray, "\x1b[33;1m"+progress+"%\x1b[0m "+lastLine+"\n")
 			}
 			errorsArray = append(errorsArray, "\x1b[31;1m"+line+"\x1b[0m\n")
-			ansi.Print("\x1b[31;1m" + line + "\x1b[0m\n")
+			consolePrint("\x1b[31;1m" + line + "\x1b[0m\n")
 			continue
 		} else {
 			line = ""
 		}
 		errors = false
-		ansi.Print(line)
+		consolePrint(line)
 	}
 
 	// If at least one file was encoded.
 	if encodingFinished && !batchMode {
 		// Play bell sound.
-		ansi.Print("\x07")
+		consolePrint("\x07")
 	}
 
 	return errorsArray

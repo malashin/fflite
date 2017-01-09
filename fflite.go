@@ -7,12 +7,10 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
-
-	ansi "github.com/k0kubun/go-ansi"
 )
 
 // Global variables.
-var version = "v0.1.0"
+var version = "v0.1.1"
 var speedArray []float64
 
 func main() {
@@ -46,7 +44,7 @@ func main() {
 			if batchInputName == "" {
 				batchInputName = args[i+1]
 			} else {
-				ansi.Print("\x1b[31;1mOnly one .txt file is allowed for batch execution.\x1b[0m\n")
+				consolePrint("\x1b[31;1mOnly one .txt file is allowed for batch execution.\x1b[0m\n")
 				os.Exit(1)
 			}
 		}
@@ -78,9 +76,9 @@ func main() {
 			// Create array of files from batch file.
 			batchArray, err := readLines(batchInputName)
 			if err != nil {
-				ansi.Print("\x1b[31;1m")
-				ansi.Print(err)
-				ansi.Print("\x1b[0m\n")
+				consolePrint("\x1b[31;1m")
+				consolePrint(err)
+				consolePrint("\x1b[0m\n")
 				os.Exit(1)
 			}
 			batchArrayLength := len(batchArray)
@@ -99,7 +97,7 @@ func main() {
 					}
 					// Replace batch input file with filename.
 					batchCommand[batchInputIndex] = file
-					ansi.Print("\n\x1b[42;1mINPUT " + strconv.FormatInt(int64(i)+1, 10) + " of " + strconv.FormatInt(int64(batchArrayLength), 10) + "\x1b[0m\n")
+					consolePrint("\n\x1b[42;1mINPUT " + strconv.FormatInt(int64(i)+1, 10) + " of " + strconv.FormatInt(int64(batchArrayLength), 10) + "\x1b[0m\n")
 					errors = encodeFile(batchCommand, true)
 					// Append errors to errorsArray
 					if len(errors) > 0 {
@@ -115,7 +113,7 @@ func main() {
 				}
 			}
 			// Play bell sound.
-			ansi.Print("\x07")
+			consolePrint("\x07")
 		}
 	} else {
 		errors := encodeFile(ffCommand, false)
@@ -124,9 +122,9 @@ func main() {
 
 	// Print out all errors
 	if len(errorsArray) > 0 {
-		ansi.Print("\n\x1b[41;1mERROR LOG:\x1b[0m\n")
+		consolePrint("\n\x1b[41;1mERROR LOG:\x1b[0m\n")
 		for _, v := range errorsArray {
-			ansi.Print(v)
+			consolePrint(v)
 		}
 	}
 }
