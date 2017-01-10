@@ -12,7 +12,7 @@ import (
 )
 
 // Global variables.
-var version = "v0.1.2"
+var version = "v0.1.3"
 var speedArray []float64
 var presets = map[string]string{
 	`^\@crf(\d+)$`: "-an -vcodec libx264 -preset medium -crf ${1} -pix_fmt yuv420p -g 0 -map_metadata -1 -map_chapters -1",
