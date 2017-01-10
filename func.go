@@ -183,9 +183,9 @@ func readLines(path string) ([]string, error) {
 }
 
 // consolePrint prints str to console while cursor is hidden
-func consolePrint(str interface{}) {
+func consolePrint(str ...interface{}) {
 	ansi.CursorHide()
-	ansi.Print(str)
+	ansi.Print(str...)
 	ansi.CursorShow()
 }
 
