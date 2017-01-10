@@ -313,8 +313,11 @@ func encodeFile(ffCommand []string, batchMode bool) []string {
 			currentSpeed, _ = strconv.ParseFloat(timeSpeed[1], 64)
 			progress = truncPad(strconv.FormatInt(int64(currentSecond/(duration/100.0)), 10), 3, 'r')
 			eta = secondsToHHMMSS(getETA(currentSpeed, duration, currentSecond))
-			lastLine = strings.TrimSpace(r.ReplaceAllString(line, "${1} ${3}"))
 			line = strings.TrimSpace(r.ReplaceAllString(line, "${1} ${3}"))
+			if len(line) < len(lastLine) {
+				line += strings.Repeat(" ", len(lastLine)-len(line))
+			}
+			lastLine = strings.TrimSpace(r.ReplaceAllString(line, "${1} ${3}"))
 			line = "\x1b[33;1m" + progress + "%\x1b[0m eta=" + eta + " " + line + "\r"
 		} else if r = regexp.MustCompile(`.* (time=.*) bitrate=.*(\/s|N\/A)(.*)`); r.MatchString(line) {
 			currentSecond = hhmmssmsToSeconds(regexp.MustCompile(`.*size=.* time=.*?(\d{2}\:\d{2}\:\d{2}\.\d{2}).*`).ReplaceAllString(line, "$1"))
@@ -325,8 +328,11 @@ func encodeFile(ffCommand []string, batchMode bool) []string {
 			}
 			progress = truncPad(strconv.FormatInt(int64(currentSecond/(duration/100.0)), 10), 3, 'r')
 			eta = secondsToHHMMSS(getETA(currentSpeed, duration, currentSecond))
-			lastLine = strings.TrimSpace(r.ReplaceAllString(line, "${1}${3}"))
 			line = strings.TrimSpace(r.ReplaceAllString(line, "${1}${3}"))
+			if len(line) < len(lastLine) {
+				line += strings.Repeat(" ", len(lastLine)-len(line))
+			}
+			lastLine = strings.TrimSpace(r.ReplaceAllString(line, "${1}${3}"))
 			line = "\x1b[33;1m" + progress + "%\x1b[0m eta=" + eta + " " + line + " speed=" + strconv.FormatFloat(currentSpeed, 'f', 2, 64) + "x\r"
 		} else if r = regexp.MustCompile(`.*Press \[q\] to stop.*`); r.MatchString(line) {
 			line = ""
