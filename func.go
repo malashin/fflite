@@ -193,27 +193,35 @@ func consolePrint(str ...interface{}) {
 func help() {
 	consolePrint("fflite is FFmpeg wrapper for minimalistic progress visualization while keeping the flexability of CLI.\n")
 	consolePrint("fflite version " + version + ".\n")
-	consolePrint("\nUsage:\n\n")
-	consolePrint("        It uses the same syntax as FFmpeg:\n")
-	consolePrint("        fflite [global_options] {[input_file_options] -i input_file} ... {[output_file_options] output_file} ...\n")
-	consolePrint("        In order to pass arguments with spaces in it, surround them with escaped doublequotes \\\"input file\\\".\n")
-	consolePrint("        For batch execution pass \".txt\" file as input.\n")
-	consolePrint("\nFFmpeg documentation:\n\n")
-	consolePrint("        www.ffmpeg.org/ffmpeg-all.html\n")
-	consolePrint("\nGithub page:\n\n")
-	consolePrint("        github.com/malashin/fflite\n")
+	consolePrint("\n\x1b[33;1mUsage:\x1b[0m\n\n")
+	consolePrint("    It uses the same syntax as FFmpeg:\n\n")
+	consolePrint("    fflite [global_options] {[input_file_options] -i input_file} ... {[output_file_options] output_file} ...\n\n")
+	consolePrint("    In order to pass arguments with spaces in it, surround them with escaped doublequotes \\\"input file\\\".\n")
+	consolePrint("    For batch execution pass \".txt\" file as input.\n")
+	consolePrint("    Preset arguments are replaced with specific strings.\n")
+	consolePrint("\n\x1b[33;1mPresets:\x1b[0m\n\n")
+	length := 0
+	for key := range presets {
+		if len(key[2:len(key)-1]) > length {
+			length = len(key[2 : len(key)-1])
+		}
+	}
+	for key, value := range presets {
+		consolePrint("    " + key[2:len(key)-1] + strings.Repeat(" ", length-len(key[2:len(key)-1])) + ": " + value + "\n")
+	}
+	consolePrint("\n\x1b[33;1mFFmpeg documentation:\x1b[0m\n\n")
+	consolePrint("    www.ffmpeg.org/ffmpeg-all.html\n")
+	consolePrint("\n\x1b[33;1mGithub page:\x1b[0m\n\n")
+	consolePrint("    github.com/malashin/fflite\n")
 }
 
 // argsPreset replaces passed arguments with preset values.
 func argsPreset(input string) []string {
-	var r *regexp.Regexp
 	out := input
-	if r = regexp.MustCompile(`^\@crf(\d+)$`); r.MatchString(input) {
-		out = r.ReplaceAllString(input, "-an -vcodec libx264 -preset medium -crf ${1} -pix_fmt yuv420p -g 0 -map_metadata -1 -map_chapters -1")
-	} else if r = regexp.MustCompile(`^\@ac(\d+)$`); r.MatchString(input) {
-		out = r.ReplaceAllString(input, "-vn -acodec ac3 -ab ${1}k -map_metadata -1 -map_chapters -1")
-	} else if r = regexp.MustCompile(`^\@nometa$`); r.MatchString(input) {
-		out = r.ReplaceAllString(input, "-map_metadata -1 -map_chapters -1")
+	for key, value := range presets {
+		if r := regexp.MustCompile(key); r.MatchString(input) {
+			out = r.ReplaceAllString(input, value)
+		}
 	}
 	return strings.Split(out, " ")
 }
@@ -299,16 +307,16 @@ func encodeFile(ffCommand []string, batchMode bool) []string {
 		} else if r = regexp.MustCompile(`(.*No such file.*|.*Invalid data.*|.*At least one output file must be specified.*|.*Unrecognized option.*|.*Option not found.*|.*matches no streams.*|.*not supported.*|.*Invalid argument.*|.*Error.*|.*not exist.*|.*-vf\/-af\/-filter.*|.*No such filter.*|.*does not contain.*|.*Not overwriting - exiting.*|.*\[y\/N\].*)`); r.MatchString(line) {
 			line = r.ReplaceAllString(line, "\x1b[31;1m${1}\x1b[0m\n")
 			errorsArray = append(errorsArray, line)
-		} else if r = regexp.MustCompile(`.* (time=.*) bitrate=.*\/s(.*speed=.*)`); r.MatchString(line) {
+		} else if r = regexp.MustCompile(`.* (time=.*) bitrate=.*(\/s|N\/A).*(speed=.*)`); r.MatchString(line) {
 			timeSpeed = strings.Split(regexp.MustCompile(`.* time=.*?(\d{2}\:\d{2}\:\d{2}\.\d{2}).* speed=.*?(\d+\.\d+|\d+)x`).ReplaceAllString(line, "$1 $2"), " ")
 			currentSecond = hhmmssmsToSeconds(timeSpeed[0])
 			currentSpeed, _ = strconv.ParseFloat(timeSpeed[1], 64)
 			progress = truncPad(strconv.FormatInt(int64(currentSecond/(duration/100.0)), 10), 3, 'r')
 			eta = secondsToHHMMSS(getETA(currentSpeed, duration, currentSecond))
-			lastLine = strings.TrimSpace(r.ReplaceAllString(line, "${1}${2}"))
-			line = strings.TrimSpace(r.ReplaceAllString(line, "${1}${2}"))
+			lastLine = strings.TrimSpace(r.ReplaceAllString(line, "${1} ${3}"))
+			line = strings.TrimSpace(r.ReplaceAllString(line, "${1} ${3}"))
 			line = "\x1b[33;1m" + progress + "%\x1b[0m eta=" + eta + " " + line + "\r"
-		} else if r = regexp.MustCompile(`.* (time=.*) bitrate=.*\/s(.*)`); r.MatchString(line) {
+		} else if r = regexp.MustCompile(`.* (time=.*) bitrate=.*(\/s|N\/A)(.*)`); r.MatchString(line) {
 			currentSecond = hhmmssmsToSeconds(regexp.MustCompile(`.*size=.* time=.*?(\d{2}\:\d{2}\:\d{2}\.\d{2}).*`).ReplaceAllString(line, "$1"))
 			currentUptime = time.Since(startTime)
 			currentSpeed = 0
@@ -317,8 +325,8 @@ func encodeFile(ffCommand []string, batchMode bool) []string {
 			}
 			progress = truncPad(strconv.FormatInt(int64(currentSecond/(duration/100.0)), 10), 3, 'r')
 			eta = secondsToHHMMSS(getETA(currentSpeed, duration, currentSecond))
-			lastLine = strings.TrimSpace(r.ReplaceAllString(line, "${1}${2}"))
-			line = strings.TrimSpace(r.ReplaceAllString(line, "${1}${2}"))
+			lastLine = strings.TrimSpace(r.ReplaceAllString(line, "${1}${3}"))
+			line = strings.TrimSpace(r.ReplaceAllString(line, "${1}${3}"))
 			line = "\x1b[33;1m" + progress + "%\x1b[0m eta=" + eta + " " + line + " speed=" + strconv.FormatFloat(currentSpeed, 'f', 2, 64) + "x\r"
 		} else if r = regexp.MustCompile(`.*Press \[q\] to stop.*`); r.MatchString(line) {
 			line = ""
