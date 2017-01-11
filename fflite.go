@@ -12,7 +12,7 @@ import (
 )
 
 // Global variables.
-var version = "v0.1.3"
+var version = "v0.1.4"
 var speedArray []float64
 var presets = map[string]string{
 	`^\@crf(\d+)$`: "-an -vcodec libx264 -preset medium -crf ${1} -pix_fmt yuv420p -g 0 -map_metadata -1 -map_chapters -1",
@@ -48,7 +48,7 @@ func main() {
 	// Parse all arguments and apply presets if needed.
 	// Arguments surrounded by escaped doublequotes are joined.
 	for i := 1; i < len(args); i++ {
-		if (args[i] == "-i") && (strings.HasSuffix(args[i+1], ".txt")) {
+		if (len(args) > 2) && (args[i] == "-i") && (strings.HasSuffix(args[i+1], ".txt")) {
 			if batchInputName == "" {
 				batchInputName = args[i+1]
 			} else {
