@@ -333,6 +333,9 @@ func encodeFile(ffCommand []string, batchMode bool, ffmpeg bool) []string {
 			} else if r = regexp.MustCompile(`.*Stream #(\d+\:\d+)(.*?):(.*)`); r.MatchString(line) {
 				line = r.ReplaceAllString(line, "    \x1b[36;1m${1}\x1b[0m \x1b[30;1m"+strings.ToUpper("${2}")+"\x1b[0m${3}\n")
 			} else if r = regexp.MustCompile(`(.*No such file.*|.*Invalid data.*|.*At least one output file must be specified.*|.*Unrecognized option.*|.*Option not found.*|.*matches no streams.*|.*not supported.*|.*Invalid argument.*|.*Error.*|.*not exist.*|.*-vf\/-af\/-filter.*|.*No such filter.*|.*does not contain.*|.*Not overwriting - exiting.*|.*denied.*|.*\[y\/N\].*|.*Trailing options were found on the commandline.*)`); r.MatchString(line) {
+				if (lastLineFull != "") && (lastLineFull[len(lastLineFull)-1]) == '\r' {
+					consolePrint("\n")
+				}
 				line = r.ReplaceAllString(line, "     \x1b[31;1m${1}\x1b[0m\n")
 				if batchMode {
 					errorsArray = append(errorsArray, line)
