@@ -399,7 +399,6 @@ func encodeFile(ffCommand []string, batchMode bool, ffmpeg bool) []string {
 		line := scanner.Text()
 		if !ffmpeg {
 			// Check the state of the program.
-			// Modify the lines using regexp.
 			switch {
 			case !encodingStarted && regexpMap["streamMapping"].MatchString(line):
 				streamMapping = true
@@ -410,8 +409,11 @@ func encodeFile(ffCommand []string, batchMode bool, ffmpeg bool) []string {
 				streamMapping = false
 			case encodingStarted && regexpMap["encodingFinished"].MatchString(line):
 				encodingStarted, encodingFinished = parseFinish(line, sigint, progress, lastLine, startTime)
+			}
+			// Modify the lines using regexp.
+			switch {
 			case streamMapping:
-				line = ("\x1b[30;1m  " + line + "\x1b[0m\n")
+				line = "\x1b[30;1m  " + line + "\x1b[0m\n"
 			case regexpMap["input"].MatchString(line):
 				line = parseInput(line)
 			case regexpMap["output"].MatchString(line):
