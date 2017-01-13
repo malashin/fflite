@@ -399,50 +399,46 @@ func encodeFile(ffCommand []string, batchMode bool, ffmpeg bool) []string {
 		line := scanner.Text()
 		if !ffmpeg {
 			// Check the state of the program.
-			if !encodingStarted && regexpMap["streamMapping"].MatchString(line) {
+			// Modify the lines using regexp.
+			switch {
+			case !encodingStarted && regexpMap["streamMapping"].MatchString(line):
 				streamMapping = true
-			}
-			if !encodingStarted && regexpMap["encodingStarted"].MatchString(line) {
+			case !encodingStarted && regexpMap["encodingStarted"].MatchString(line):
 				startTime = time.Now()
 				prevUptime = time.Since(startTime)
 				encodingStarted = true
 				streamMapping = false
-			}
-			if encodingStarted && regexpMap["encodingFinished"].MatchString(line) {
+			case encodingStarted && regexpMap["encodingFinished"].MatchString(line):
 				encodingStarted, encodingFinished = parseFinish(line, sigint, progress, lastLine, startTime)
-			}
-			// Print out stream mapping information.
-			if streamMapping {
-				consolePrint("\x1b[30;1m  " + line + "\x1b[0m\n")
-				continue
-			}
-			// Modify the lines using regexp.
-			if regexpMap["input"].MatchString(line) {
+			case streamMapping:
+				line = ("\x1b[30;1m  " + line + "\x1b[0m\n")
+			case regexpMap["input"].MatchString(line):
 				line = parseInput(line)
-			} else if regexpMap["output"].MatchString(line) {
+			case regexpMap["output"].MatchString(line):
 				line = parseOutput(line)
-			} else if regexpMap["duration"].MatchString(line) {
+			case regexpMap["duration"].MatchString(line):
 				line, duration = parseDuration(line)
-			} else if regexpMap["stream"].MatchString(line) {
+			case regexpMap["stream"].MatchString(line):
 				line = parseStream(line)
-			} else if regexpMap["errors"].MatchString(line) {
+			case regexpMap["errors"].MatchString(line):
 				line, errorsArray = parseErrors(line, lastLineFull, batchMode, errorsArray)
-			} else if regexpMap["warnings"].MatchString(line) {
+			case regexpMap["warnings"].MatchString(line):
 				line, warningArray = parseWarnings(line, lastLineFull, warningArray, warningSpam)
-			} else if regexpMap["encoding"].MatchString(line) {
+			case regexpMap["encoding"].MatchString(line):
 				line, lastLine, progress, speedArray = parseEncoding(line, lastLine, duration, speedArray)
-			} else if regexpMap["encodingNoSpeed"].MatchString(line) {
+			case regexpMap["encodingNoSpeed"].MatchString(line):
 				line, lastLine, progress, speedArray = parseEncodingNoSpeed(line, lastLine, duration, startTime, prevUptime, prevSecond, speedArray)
-			} else if regexpMap["hide"].MatchString(line) {
+			case regexpMap["hide"].MatchString(line):
 				line = ""
-			} else if encodingStarted {
+			case encodingStarted:
 				line, lastLineUsed, errorsArray = parseEncodingErrors(line, lastLineFull, lastLineUsed, lastLine, errorsArray, progress)
-			} else {
+			default:
 				line = ""
 			}
 			lastLineFull = line
 			consolePrint(line)
 		} else {
+			// If not in ffmpeg mode, don't modify the output.
 			consolePrint(line + "\n")
 		}
 	}
