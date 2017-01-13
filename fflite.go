@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"syscall"
@@ -12,20 +13,35 @@ import (
 )
 
 // Global variables.
-var version = "v0.1.5"
-var speedArray []float64
+var version = "v0.1.6"
 var presets = map[string]string{
 	`^\@crf(\d+)$`: "-an -vcodec libx264 -preset medium -crf ${1} -pix_fmt yuv420p -g 0 -map_metadata -1 -map_chapters -1",
 	`^\@ac(\d+)$`:  "-vn -acodec ac3 -ab ${1}k -map_metadata -1 -map_chapters -1",
 	`^\@nometa$`:   "-map_metadata -1 -map_chapters -1",
 	`^\@check$`:    "-f null NUL",
 }
+var regexpMap = map[string]*regexp.Regexp{
+	"streamMapping":    regexp.MustCompile(`Stream mapping:`),
+	"encodingStarted":  regexp.MustCompile(`.*Press \[q\] to stop.*`),
+	"encodingFinished": regexp.MustCompile(`.*video:.*audio.*subtitle.*other streams.*global headers.*`),
+	"input":            regexp.MustCompile(`Input #(\d+),.*from \'(.*)\'\:`),
+	"output":           regexp.MustCompile(`Output #(\d+),.*to \'(.*)\'\:`),
+	"duration":         regexp.MustCompile(`.*(Duration.*)`),
+	"durationHHMMSSMS": regexp.MustCompile(`.*Duration: (\d{2}\:\d{2}\:\d{2}\.\d{2}).*`),
+	"stream":           regexp.MustCompile(`.*Stream #(\d+\:\d+)(.*?):(.*)`),
+	"errors":           regexp.MustCompile(`(.*No such file.*|.*Invalid data.*|.*At least one output file must be specified.*|.*Unrecognized option.*|.*Option not found.*|.*matches no streams.*|.*not supported.*|.*Invalid argument.*|.*Error.*|.*not exist.*|.*-vf\/-af\/-filter.*|.*No such filter.*|.*does not contain.*|.*Not overwriting - exiting.*|.*denied.*|.*\[y\/N\].*|.*Trailing options were found on the commandline.*)`),
+	"warnings":         regexp.MustCompile(`(.*Warning:.*|.*Past duration.*too large.*)`),
+	"encoding":         regexp.MustCompile(`.* (time=.*) bitrate=.*(\/s|N\/A).*(speed=.*)`),
+	"timeSpeed":        regexp.MustCompile(`.* time=.*?(\d{2}\:\d{2}\:\d{2}\.\d{2}).* speed=.*?(\d+\.\d+|\d+)x`),
+	"encodingNoSpeed":  regexp.MustCompile(`.* (time=.*) bitrate=.*(\/s|N\/A)(.*)`),
+	"currentSecond":    regexp.MustCompile(`.*size=.* time=.*?(\d{2}\:\d{2}\:\d{2}\.\d{2}).*`),
+	"hide":             regexp.MustCompile(`(.*Press \[q\] to stop.*|.*Last message repeated.*)`),
+}
 
 func main() {
 	// Main variables.
-	var lastArgs, batchInputName, basename string
-	var errorsArray, errors []string
-	var batchInputIndex int
+	var lastArgs, batchInputName string
+	var errorsArray []string
 	var sigint, appendArgs, ffmpeg = false, false, false
 	// Intercept interrupt signal
 	c := make(chan os.Signal, 1)
@@ -84,7 +100,7 @@ func main() {
 	// .txt input will be replaced with each line from that file.
 	if batchInputName != "" {
 		// Get index of batch file.
-		batchInputIndex = stringIndexInSlice(ffCommand, batchInputName)
+		batchInputIndex := stringIndexInSlice(ffCommand, batchInputName)
 		if batchInputIndex != -1 {
 			// Create array of files from batch file.
 			batchArray, err := readLines(batchInputName)
@@ -99,7 +115,7 @@ func main() {
 			for i, file := range batchArray {
 				if !sigint {
 					// Strip extension.
-					basename = file[0 : len(file)-len(filepath.Ext(file))]
+					basename := file[0 : len(file)-len(filepath.Ext(file))]
 					batchCommand := make([]string, len(ffCommand), (cap(ffCommand)+1)*2)
 					copy(batchCommand, ffCommand)
 					// Append basename to each output file.
@@ -111,7 +127,7 @@ func main() {
 					// Replace batch input file with filename.
 					batchCommand[batchInputIndex] = file
 					consolePrint("\n\x1b[42;1mINPUT " + strconv.FormatInt(int64(i)+1, 10) + " of " + strconv.FormatInt(int64(batchArrayLength), 10) + "\x1b[0m\n")
-					errors = encodeFile(batchCommand, true, ffmpeg)
+					errors := encodeFile(batchCommand, true, ffmpeg)
 					// Append errors to errorsArray.
 					if len(errors) > 0 {
 						if len(errorsArray) != 0 {
@@ -120,9 +136,6 @@ func main() {
 						errorsArray = append(errorsArray, "\x1b[42;1mINPUT "+strconv.FormatInt(int64(i)+1, 10)+":\x1b[0m\x1b[32;1m "+file+"\x1b[0m\n")
 						errorsArray = append(errorsArray, errors...)
 					}
-					// Reset the speedArray and errors.
-					speedArray = []float64{}
-					errors = []string{}
 				}
 			}
 			// Play bell sound.

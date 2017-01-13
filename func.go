@@ -130,7 +130,7 @@ func secondsToHHMMSS(seconds string) string {
 }
 
 // getETA return remaining time for current file encoding based on average speed.
-func getETA(currentSpeed, duration, currentSecond float64) string {
+func getETA(currentSpeed, duration, currentSecond float64, speedArray []float64) (string, []float64) {
 	speedArray = append(speedArray, currentSpeed)
 	if len(speedArray) >= 30 {
 		speedArray = speedArray[len(speedArray)-30 : len(speedArray)]
@@ -140,9 +140,9 @@ func getETA(currentSpeed, duration, currentSecond float64) string {
 		sum += value
 	}
 	if sum == 0 {
-		return "N/A"
+		return "N/A", speedArray
 	}
-	return strconv.FormatInt(round((duration-currentSecond)/(sum/float64(len(speedArray)))), 10)
+	return strconv.FormatInt(round((duration-currentSecond)/(sum/float64(len(speedArray)))), 10), speedArray
 }
 
 // truncPad truncs or pads string to needed length.
@@ -186,18 +186,18 @@ func readLines(path string) ([]string, error) {
 	return lines, scanner.Err()
 }
 
-// consolePrint prints str to console while cursor is hidden
+// consolePrint prints str to console while cursor is hidden.
 func consolePrint(str ...interface{}) {
 	ansi.Print("\x1b[?25l") // Hide the cursor.
 	ansi.Print(str...)
 	ansi.Print("\x1b[?25h") // Show the cursor.
 }
 
-//
+// isWarningSpamming checks if warning message comes up too often and omits it if needed.
 func isWarningSpamming(array []string, str string, spamList map[string]bool) bool {
 	if !spamList[str] {
 		count := 0
-		limit := 5
+		limit := 10
 		for _, v := range array {
 			if v == str {
 				count++
@@ -211,6 +211,121 @@ func isWarningSpamming(array []string, str string, spamList map[string]bool) boo
 		return false
 	}
 	return true
+}
+
+// argsPreset replaces passed arguments with preset values.
+func argsPreset(input string) []string {
+	out := input
+	for key, value := range presets {
+		if r := regexp.MustCompile(key); r.MatchString(input) {
+			out = r.ReplaceAllString(input, value)
+		}
+	}
+	return strings.Split(out, " ")
+}
+
+func parseInput(line string) string {
+	return regexpMap["input"].ReplaceAllString(line, "\x1b[32m  INPUT ${1}:\x1b[0m \x1b[32;1m${2}\x1b[0m\n")
+}
+
+func parseOutput(line string) string {
+	return regexpMap["output"].ReplaceAllString(line, "\x1b[33m  OUTPUT ${1}:\x1b[0m \x1b[33;1m${2}\x1b[0m\n")
+}
+
+func parseDuration(line string) (string, float64) {
+	duration := hhmmssmsToSeconds(regexpMap["durationHHMMSSMS"].ReplaceAllString(line, "${1}"))
+	line = regexpMap["duration"].ReplaceAllString(line, "  ${1}\n")
+	return line, duration
+}
+
+func parseStream(line string) string {
+	return regexpMap["stream"].ReplaceAllString(line, "    \x1b[36;1m${1}\x1b[0m \x1b[30;1m"+strings.ToUpper("${2}")+"\x1b[0m${3}\n")
+}
+
+func parseErrors(line string, lastLineFull string, batchMode bool, errorsArray []string) (string, []string) {
+	if (lastLineFull != "") && (lastLineFull[len(lastLineFull)-1]) == '\r' {
+		consolePrint("\n")
+	}
+	line = regexpMap["errors"].ReplaceAllString(line, "     \x1b[31;1m${1}\x1b[0m\n")
+	if batchMode {
+		errorsArray = append(errorsArray, line)
+	}
+	return line, errorsArray
+}
+
+func parseWarnings(line string, lastLineFull string, warningArray []string, warningSpam map[string]bool) (string, []string) {
+	line = strings.TrimSpace(regexpMap["warnings"].ReplaceAllString(line, "${1}"))
+	if isWarningSpamming(warningArray, line, warningSpam) {
+		return line, warningArray
+	}
+	warningArray = append(warningArray, line)
+	if (lastLineFull != "") && (lastLineFull[len(lastLineFull)-1]) == '\r' {
+		consolePrint("\n")
+	}
+	line = regexpMap["warnings"].ReplaceAllString(line, "     \x1b[33;1m"+line+"\x1b[0m\n")
+	return line, warningArray
+}
+
+func parseEncoding(line string, lastLine string, duration float64, speedArray []float64) (string, string, string, []float64) {
+	timeSpeed := strings.Split(regexpMap["timeSpeed"].ReplaceAllString(line, "$1 $2"), " ")
+	currentSecond := hhmmssmsToSeconds(timeSpeed[0])
+	currentSpeed, _ := strconv.ParseFloat(timeSpeed[1], 64)
+	progress := truncPad(strconv.FormatInt(int64(currentSecond/(duration/100.0)), 10), 3, 'r')
+	eta, speedArray := getETA(currentSpeed, duration, currentSecond, speedArray)
+	eta = secondsToHHMMSS(eta)
+	line = strings.TrimSpace(regexpMap["encoding"].ReplaceAllString(line, "${1} ${3}"))
+	if len(line) < len(lastLine) {
+		line += strings.Repeat(" ", len(lastLine)-len(line))
+	}
+	lastLine = line
+	line = "\x1b[33;1m" + progress + "%\x1b[0m eta=" + eta + " " + line + "\r"
+	return line, lastLine, progress, speedArray
+}
+
+func parseEncodingNoSpeed(line string, lastLine string, duration float64, startTime time.Time, prevUptime time.Duration, prevSecond float64, speedArray []float64) (string, string, string, []float64) {
+	currentSecond := hhmmssmsToSeconds(regexpMap["currentSecond"].ReplaceAllString(line, "$1"))
+	currentUptime := time.Since(startTime)
+	currentSpeed := 0.0
+	if currentUptime-prevUptime > 0 {
+		currentSpeed = (currentSecond - prevSecond) / (currentUptime - prevUptime).Seconds()
+	}
+	progress := truncPad(strconv.FormatInt(int64(currentSecond/(duration/100.0)), 10), 3, 'r')
+	eta, speedArray := getETA(currentSpeed, duration, currentSecond, speedArray)
+	eta = secondsToHHMMSS(eta)
+	line = strings.TrimSpace(regexpMap["encodingNoSpeed"].ReplaceAllString(line, "${1}${3}"))
+	if len(line) < len(lastLine) {
+		line += strings.Repeat(" ", len(lastLine)-len(line))
+	}
+	lastLine = line
+	line = "\x1b[33;1m" + progress + "%\x1b[0m eta=" + eta + " " + line + " speed=" + strconv.FormatFloat(currentSpeed, 'f', 2, 64) + "x\r"
+	return line, lastLine, progress, speedArray
+}
+
+func parseEncodingErrors(line string, lastLineFull string, lastLineUsed string, lastLine string, errorsArray []string, progress string) (string, string, []string) {
+	if (lastLineFull != "") && (lastLineFull[len(lastLineFull)-1]) == '\r' {
+		consolePrint("\n")
+	}
+	// Add timecode and errors to array.
+	if lastLineUsed != lastLine {
+		lastLineUsed = lastLine
+		errorsArray = append(errorsArray, "\x1b[33;1m"+progress+"%\x1b[0m "+lastLine+"\n")
+	}
+	errorsArray = append(errorsArray, "     \x1b[31;1m"+line+"\x1b[0m\n")
+	line = "     \x1b[31;1m" + line + "\x1b[0m\n"
+	return line, lastLineUsed, errorsArray
+}
+
+func parseFinish(line string, sigint bool, progress string, lastLine string, startTime time.Time) (bool, bool) {
+	consolePrint(strings.Repeat(" ", len(line)) + "\r")
+	if sigint {
+		consolePrint("\x1b[31;1m" + progress + "%\x1b[0m " + lastLine + "\n")
+		consolePrint("\x1b[31;1mSIGINT\x1b[0m\n")
+	} else {
+		consolePrint("\x1b[32;1m100%\x1b[0m et=" + secondsToHHMMSS(strconv.FormatFloat(time.Since(startTime).Seconds(), 'f', -1, 64)) + " " + lastLine + "\n")
+	}
+	encodingStarted := false
+	encodingFinished := true
+	return encodingStarted, encodingFinished
 }
 
 // help returns usage information and programm version.
@@ -240,28 +355,15 @@ func help() {
 	consolePrint("    github.com/malashin/fflite\n")
 }
 
-// argsPreset replaces passed arguments with preset values.
-func argsPreset(input string) []string {
-	out := input
-	for key, value := range presets {
-		if r := regexp.MustCompile(key); r.MatchString(input) {
-			out = r.ReplaceAllString(input, value)
-		}
-	}
-	return strings.Split(out, " ")
-}
-
 // encodeFile starts ffmpeg command witch passed arguments in ffCommand []string array.
-// If batchMode is true BELL sound is turned off.
 func encodeFile(ffCommand []string, batchMode bool, ffmpeg bool) []string {
-	var progress, eta, lastLine, lastLineUsed, lastLineFull string
-	var timeSpeed, errorsArray, warningArray []string
-	var duration, currentSecond, currentSpeed, prevSecond float64
+	var progress, lastLine, lastLineUsed, lastLineFull string
+	var errorsArray, warningArray []string
+	var duration, prevSecond float64
+	var speedArray []float64
 	var encodingStarted, encodingFinished, streamMapping, sigint = false, false, false, false
-	var r *regexp.Regexp
 	var startTime time.Time
 	var prevUptime time.Duration
-	var currentUptime time.Duration
 	var warningSpam map[string]bool
 	warningSpam = make(map[string]bool)
 
@@ -297,25 +399,17 @@ func encodeFile(ffCommand []string, batchMode bool, ffmpeg bool) []string {
 		line := scanner.Text()
 		if !ffmpeg {
 			// Check the state of the program.
-			if !encodingStarted && regexp.MustCompile(`Stream mapping:`).MatchString(line) {
+			if !encodingStarted && regexpMap["streamMapping"].MatchString(line) {
 				streamMapping = true
 			}
-			if !encodingStarted && regexp.MustCompile(`.*Press \[q\] to stop.*`).MatchString(line) {
+			if !encodingStarted && regexpMap["encodingStarted"].MatchString(line) {
 				startTime = time.Now()
 				prevUptime = time.Since(startTime)
 				encodingStarted = true
 				streamMapping = false
 			}
-			if encodingStarted && regexp.MustCompile(`.*video:.*audio.*subtitle.*other streams.*global headers.*`).MatchString(line) {
-				consolePrint(strings.Repeat(" ", len(line)) + "\r")
-				if sigint {
-					consolePrint("\x1b[31;1m" + progress + "%\x1b[0m " + lastLine + "\n")
-					consolePrint("\x1b[31;1mSIGINT\x1b[0m\n")
-				} else {
-					consolePrint("\x1b[32;1m100%\x1b[0m et=" + secondsToHHMMSS(strconv.FormatFloat(time.Since(startTime).Seconds(), 'f', -1, 64)) + " " + lastLine + "\n")
-				}
-				encodingStarted = false
-				encodingFinished = true
+			if encodingStarted && regexpMap["encodingFinished"].MatchString(line) {
+				encodingStarted, encodingFinished = parseFinish(line, sigint, progress, lastLine, startTime)
 			}
 			// Print out stream mapping information.
 			if streamMapping {
@@ -323,75 +417,26 @@ func encodeFile(ffCommand []string, batchMode bool, ffmpeg bool) []string {
 				continue
 			}
 			// Modify the lines using regexp.
-			if r = regexp.MustCompile(`Input #(\d+),.*from \'(.*)\'\:`); r.MatchString(line) {
-				line = r.ReplaceAllString(line, "\x1b[32m  INPUT ${1}:\x1b[0m \x1b[32;1m${2}\x1b[0m\n")
-			} else if r = regexp.MustCompile(`Output #(\d+),.*to \'(.*)\'\:`); r.MatchString(line) {
-				line = r.ReplaceAllString(line, "\x1b[33m  OUTPUT ${1}:\x1b[0m \x1b[33;1m${2}\x1b[0m\n")
-			} else if r = regexp.MustCompile(`.*(Duration.*)`); r.MatchString(line) {
-				duration = hhmmssmsToSeconds(regexp.MustCompile(`.*Duration: (\d{2}\:\d{2}\:\d{2}\.\d{2}).*`).ReplaceAllString(line, "${1}"))
-				line = r.ReplaceAllString(line, "  ${1}\n")
-			} else if r = regexp.MustCompile(`.*Stream #(\d+\:\d+)(.*?):(.*)`); r.MatchString(line) {
-				line = r.ReplaceAllString(line, "    \x1b[36;1m${1}\x1b[0m \x1b[30;1m"+strings.ToUpper("${2}")+"\x1b[0m${3}\n")
-			} else if r = regexp.MustCompile(`(.*No such file.*|.*Invalid data.*|.*At least one output file must be specified.*|.*Unrecognized option.*|.*Option not found.*|.*matches no streams.*|.*not supported.*|.*Invalid argument.*|.*Error.*|.*not exist.*|.*-vf\/-af\/-filter.*|.*No such filter.*|.*does not contain.*|.*Not overwriting - exiting.*|.*denied.*|.*\[y\/N\].*|.*Trailing options were found on the commandline.*)`); r.MatchString(line) {
-				if (lastLineFull != "") && (lastLineFull[len(lastLineFull)-1]) == '\r' {
-					consolePrint("\n")
-				}
-				line = r.ReplaceAllString(line, "     \x1b[31;1m${1}\x1b[0m\n")
-				if batchMode {
-					errorsArray = append(errorsArray, line)
-				}
-			} else if r = regexp.MustCompile(`(.*Warning:.*|.*Past duration.*too large.*)`); r.MatchString(line) {
-				line = strings.TrimSpace(r.ReplaceAllString(line, "${1}"))
-				if isWarningSpamming(warningArray, line, warningSpam) {
-					continue
-				}
-				warningArray = append(warningArray, line)
-				if (lastLineFull != "") && (lastLineFull[len(lastLineFull)-1]) == '\r' {
-					consolePrint("\n")
-				}
-				line = r.ReplaceAllString(line, "     \x1b[33;1m"+line+"\x1b[0m\n")
-			} else if r = regexp.MustCompile(`.* (time=.*) bitrate=.*(\/s|N\/A).*(speed=.*)`); r.MatchString(line) {
-				timeSpeed = strings.Split(regexp.MustCompile(`.* time=.*?(\d{2}\:\d{2}\:\d{2}\.\d{2}).* speed=.*?(\d+\.\d+|\d+)x`).ReplaceAllString(line, "$1 $2"), " ")
-				currentSecond = hhmmssmsToSeconds(timeSpeed[0])
-				currentSpeed, _ = strconv.ParseFloat(timeSpeed[1], 64)
-				progress = truncPad(strconv.FormatInt(int64(currentSecond/(duration/100.0)), 10), 3, 'r')
-				eta = secondsToHHMMSS(getETA(currentSpeed, duration, currentSecond))
-				line = strings.TrimSpace(r.ReplaceAllString(line, "${1} ${3}"))
-				if len(line) < len(lastLine) {
-					line += strings.Repeat(" ", len(lastLine)-len(line))
-				}
-				lastLine = strings.TrimSpace(r.ReplaceAllString(line, "${1} ${3}"))
-				line = "\x1b[33;1m" + progress + "%\x1b[0m eta=" + eta + " " + line + "\r"
-			} else if r = regexp.MustCompile(`.* (time=.*) bitrate=.*(\/s|N\/A)(.*)`); r.MatchString(line) {
-				currentSecond = hhmmssmsToSeconds(regexp.MustCompile(`.*size=.* time=.*?(\d{2}\:\d{2}\:\d{2}\.\d{2}).*`).ReplaceAllString(line, "$1"))
-				currentUptime = time.Since(startTime)
-				currentSpeed = 0
-				if currentUptime-prevUptime > 0 {
-					currentSpeed = (currentSecond - prevSecond) / (currentUptime - prevUptime).Seconds()
-				}
-				progress = truncPad(strconv.FormatInt(int64(currentSecond/(duration/100.0)), 10), 3, 'r')
-				eta = secondsToHHMMSS(getETA(currentSpeed, duration, currentSecond))
-				line = strings.TrimSpace(r.ReplaceAllString(line, "${1}${3}"))
-				if len(line) < len(lastLine) {
-					line += strings.Repeat(" ", len(lastLine)-len(line))
-				}
-				lastLine = strings.TrimSpace(r.ReplaceAllString(line, "${1}${3}"))
-				line = "\x1b[33;1m" + progress + "%\x1b[0m eta=" + eta + " " + line + " speed=" + strconv.FormatFloat(currentSpeed, 'f', 2, 64) + "x\r"
-			} else if r = regexp.MustCompile(`(.*Press \[q\] to stop.*|.*Last message repeated.*)`); r.MatchString(line) {
+			if regexpMap["input"].MatchString(line) {
+				line = parseInput(line)
+			} else if regexpMap["output"].MatchString(line) {
+				line = parseOutput(line)
+			} else if regexpMap["duration"].MatchString(line) {
+				line, duration = parseDuration(line)
+			} else if regexpMap["stream"].MatchString(line) {
+				line = parseStream(line)
+			} else if regexpMap["errors"].MatchString(line) {
+				line, errorsArray = parseErrors(line, lastLineFull, batchMode, errorsArray)
+			} else if regexpMap["warnings"].MatchString(line) {
+				line, warningArray = parseWarnings(line, lastLineFull, warningArray, warningSpam)
+			} else if regexpMap["encoding"].MatchString(line) {
+				line, lastLine, progress, speedArray = parseEncoding(line, lastLine, duration, speedArray)
+			} else if regexpMap["encodingNoSpeed"].MatchString(line) {
+				line, lastLine, progress, speedArray = parseEncodingNoSpeed(line, lastLine, duration, startTime, prevUptime, prevSecond, speedArray)
+			} else if regexpMap["hide"].MatchString(line) {
 				line = ""
 			} else if encodingStarted {
-				if (lastLineFull != "") && (lastLineFull[len(lastLineFull)-1]) == '\r' {
-					consolePrint("\n")
-				}
-				// Add timecode and errors to array.
-				if lastLineUsed != lastLine {
-					lastLineUsed = lastLine
-					errorsArray = append(errorsArray, "\x1b[33;1m"+progress+"%\x1b[0m "+lastLine+"\n")
-				}
-				errorsArray = append(errorsArray, "     \x1b[31;1m"+line+"\x1b[0m\n")
-				lastLineFull = "     \x1b[31;1m" + line + "\x1b[0m\n"
-				consolePrint(lastLineFull)
-				continue
+				line, lastLineUsed, errorsArray = parseEncodingErrors(line, lastLineFull, lastLineUsed, lastLine, errorsArray, progress)
 			} else {
 				line = ""
 			}
