@@ -215,55 +215,6 @@ func isWarningSpamming(array []string, str string, spamList map[string]bool) boo
 	return true
 }
 
-// argsPreset replaces passed arguments with preset values.
-func argsPreset(input string) []string {
-	out := input
-	for key, value := range presets {
-		if r := regexp.MustCompile(key); r.MatchString(input) {
-			out = r.ReplaceAllString(input, value)
-		}
-	}
-	return strings.Split(out, " ")
-}
-
-func parseOptions(args []string) (bool, []string) {
-	var ffmpeg bool
-	switch args[0] {
-	// If 1st argument is "ffmpeg" run the same command in ffmpeg instead of fflite.
-	case "ffmpeg":
-		ffmpeg = true
-		args = args[1:]
-	// If 1st argument is "update" check upstream version.
-	case "version":
-		upstreamVersion := getUpstreamVersion()
-		if version != upstreamVersion {
-			consolePrint("fflite version is \x1b[31;1m" + version + "\x1b[0m.\n")
-			consolePrint("Latest version is \x1b[33;1m" + upstreamVersion + "\x1b[0m.\n")
-			consolePrint("\x1b[31;1mYour fflite is out of date.\x1b[0m\n")
-			consolePrint("Use this command to update it:\n")
-			consolePrint("\x1b[30;1mgo get -u github.com/malashin/fflite\x1b[0m\n")
-		} else {
-			consolePrint("fflite version \x1b[32;1m" + version + "\x1b[0m.\n")
-			consolePrint("\x1b[32;1mYour fflite is up to date.\x1b[0m\n")
-		}
-		os.Exit(0)
-	}
-	return ffmpeg, args
-}
-
-func getUpstreamVersion() string {
-	resp, err := http.Get("https://raw.githubusercontent.com/malashin/fflite/master/fflite.go")
-	if err != nil {
-		log.Panic(err)
-	}
-	defer resp.Body.Close()
-	bytes, err := ioutil.ReadAll(resp.Body)
-	r := regexp.MustCompile(`var version = "(.*)"`)
-	version := r.FindString(string(bytes))
-	version = r.ReplaceAllString(version, "$1")
-	return version
-}
-
 func parseInput(line string) string {
 	return regexpMap["input"].ReplaceAllString(line, "\x1b[32m  INPUT ${1}:\x1b[0m \x1b[32;1m${2}\x1b[0m\n")
 }
@@ -368,6 +319,77 @@ func parseFinish(line string, sigint bool, progress string, lastLine string, sta
 	return encodingStarted, encodingFinished
 }
 
+func stripEscapesFromString(str string) string {
+	return regexp.MustCompile(`(\x1b\[\d+m|\x1b\[\d+;\d+m)`).ReplaceAllString(str, "")
+}
+
+func writeStringArrayToFile(filename string, strArray []string, perm os.FileMode) {
+	f, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, perm)
+	if err != nil {
+		log.Panic(err)
+	}
+	defer f.Close()
+	for _, v := range strArray {
+		if _, err = f.WriteString(stripEscapesFromString(v)); err != nil {
+			log.Panic(err)
+		}
+	}
+}
+
+// argsPreset replaces passed arguments with preset values.
+func argsPreset(input string) []string {
+	out := input
+	for key, value := range presets {
+		if r := regexp.MustCompile(key); r.MatchString(input) {
+			out = r.ReplaceAllString(input, value)
+		}
+	}
+	return strings.Split(out, " ")
+}
+
+func getUpstreamVersion() string {
+	resp, err := http.Get("https://raw.githubusercontent.com/malashin/fflite/master/fflite.go")
+	if err != nil {
+		log.Panic(err)
+	}
+	defer resp.Body.Close()
+	bytes, err := ioutil.ReadAll(resp.Body)
+	r := regexp.MustCompile(`var version = "(.*)"`)
+	version := r.FindString(string(bytes))
+	version = r.ReplaceAllString(version, "$1")
+	return version
+}
+
+func parseOptions(args []string) (bool, bool, []string) {
+	var ffmpeg, nologs bool
+	switch args[0] {
+	// "ffmpeg" run the same command in ffmpeg instead of fflite.
+	case "ffmpeg":
+		ffmpeg = true
+		args = args[1:]
+	// "nologs" don't save error log files.
+	case "nologs":
+		nologs = true
+		args = args[1:]
+	// "update" check upstream version.
+	case "version":
+		upstreamVersion := getUpstreamVersion()
+		if version != upstreamVersion {
+			consolePrint("fflite version is \x1b[31;1m" + version + "\x1b[0m.\n")
+			consolePrint("Latest version is \x1b[33;1m" + upstreamVersion + "\x1b[0m.\n")
+			consolePrint("\x1b[31;1mYour fflite is out of date.\x1b[0m\n")
+			consolePrint("Use this command to update it:\n")
+			consolePrint("\x1b[30;1mgo get -u github.com/malashin/fflite\x1b[0m\n")
+		} else {
+			consolePrint("fflite version \x1b[32;1m" + version + "\x1b[0m.\n")
+			consolePrint("\x1b[32;1mYour fflite is up to date.\x1b[0m\n")
+		}
+		os.Exit(0)
+
+	}
+	return ffmpeg, nologs, args
+}
+
 // help returns usage information and programm version.
 func help() {
 	consolePrint("fflite is FFmpeg wrapper for minimalistic progress visualization while keeping the flexability of CLI.\n")
@@ -381,6 +403,7 @@ func help() {
 	consolePrint("\n\x1b[33;1mOptions:\x1b[0m\n\n")
 	consolePrint("    ffmpeg       original ffmpeg text output\n")
 	consolePrint("    version      check for updates\n")
+	consolePrint("    nologs       do not create \".err\" error log files\n")
 	consolePrint("\n\x1b[33;1mPresets:\x1b[0m\n\n")
 	length := 0
 	for key := range presets {
@@ -403,7 +426,7 @@ func encodeFile(ffCommand []string, batchMode bool, ffmpeg bool) []string {
 	var errorsArray, warningArray []string
 	var duration, prevSecond float64
 	var speedArray []float64
-	var encodingStarted, encodingFinished, streamMapping, sigint = false, false, false, false
+	var encodingStarted, encodingFinished, streamMapping, sigint bool
 	var startTime time.Time
 	var prevUptime time.Duration
 	var warningSpam map[string]bool

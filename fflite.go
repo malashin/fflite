@@ -13,7 +13,7 @@ import (
 )
 
 // Global variables.
-var version = "v0.1.7"
+var version = "v0.1.8"
 var presets = map[string]string{
 	`^\@crf(\d+)$`: "-an -vcodec libx264 -preset medium -crf ${1} -pix_fmt yuv420p -g 0 -map_metadata -1 -map_chapters -1",
 	`^\@ac(\d+)$`:  "-vn -acodec ac3 -ab ${1}k -map_metadata -1 -map_chapters -1",
@@ -40,9 +40,9 @@ var regexpMap = map[string]*regexp.Regexp{
 
 func main() {
 	// Main variables.
-	var lastArgs, batchInputName string
+	var lastArgs, batchInputName, firstInput string
 	var errorsArray []string
-	var sigint, appendArgs, ffmpeg = false, false, false
+	var sigint, appendArgs, ffmpeg, nologs bool
 	// Intercept interrupt signal
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
@@ -58,7 +58,7 @@ func main() {
 		help()
 		os.Exit(0)
 	}
-	ffmpeg, args = parseOptions(args)
+	ffmpeg, nologs, args = parseOptions(args)
 	// Create slice containing arguments of ffmpeg command.
 	// Use "-hide_banner" as default.
 	ffCommand := []string{"-hide_banner"}
@@ -72,6 +72,9 @@ func main() {
 				consolePrint("\x1b[31;1mOnly one .txt file is allowed for batch execution.\x1b[0m\n")
 				os.Exit(1)
 			}
+		}
+		if (len(args) > 2) && (args[i] == "-i") && (firstInput == "") {
+			firstInput = args[i+1]
 		}
 		if !appendArgs {
 			if (args[i][0:1] == "\"") && !(args[i][len(args[i])-1:] == "\"") {
@@ -131,6 +134,10 @@ func main() {
 						}
 						errorsArray = append(errorsArray, "\x1b[42;1mINPUT "+strconv.FormatInt(int64(i)+1, 10)+":\x1b[0m\x1b[32;1m "+file+"\x1b[0m\n")
 						errorsArray = append(errorsArray, errors...)
+						if !nologs {
+							writeStringArrayToFile(file+".err", []string{"INPUT: " + file + "\n"}, 0775)
+							writeStringArrayToFile(file+".err", errors, 0775)
+						}
 					}
 				}
 			}
@@ -141,7 +148,11 @@ func main() {
 		errors := encodeFile(ffCommand, false, ffmpeg)
 		// Append errors to errorsArray.
 		if len(errors) > 0 {
+			errorsArray = append(errorsArray, "\x1b[42;1mINPUT:\x1b[0m\x1b[32;1m "+firstInput+"\x1b[0m\n")
 			errorsArray = append(errorsArray, errors...)
+			if !nologs {
+				writeStringArrayToFile(firstInput+".err", errorsArray, 0775)
+			}
 		}
 	}
 
