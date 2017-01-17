@@ -13,7 +13,7 @@ import (
 )
 
 // Global variables.
-var version = "v0.1.6"
+var version = "v0.1.7"
 var presets = map[string]string{
 	`^\@crf(\d+)$`: "-an -vcodec libx264 -preset medium -crf ${1} -pix_fmt yuv420p -g 0 -map_metadata -1 -map_chapters -1",
 	`^\@ac(\d+)$`:  "-vn -acodec ac3 -ab ${1}k -map_metadata -1 -map_chapters -1",
@@ -58,11 +58,7 @@ func main() {
 		help()
 		os.Exit(0)
 	}
-	// If 1st argument is "ffmpeg" run the same command in ffmpeg instead of fflite.
-	if args[0] == "ffmpeg" {
-		ffmpeg = true
-		args = args[1:]
-	}
+	ffmpeg, args = parseOptions(args)
 	// Create slice containing arguments of ffmpeg command.
 	// Use "-hide_banner" as default.
 	ffCommand := []string{"-hide_banner"}
@@ -143,7 +139,10 @@ func main() {
 		}
 	} else {
 		errors := encodeFile(ffCommand, false, ffmpeg)
-		errorsArray = append(errorsArray, errors...)
+		// Append errors to errorsArray.
+		if len(errors) > 0 {
+			errorsArray = append(errorsArray, errors...)
+		}
 	}
 
 	// Print out all errors.
