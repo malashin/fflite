@@ -13,7 +13,7 @@ import (
 )
 
 // Global variables.
-var version = "v0.1.8"
+var version = "v0.1.9"
 var presets = map[string]string{
 	`^\@crf(\d+)$`: "-an -vcodec libx264 -preset medium -crf ${1} -pix_fmt yuv420p -g 0 -map_metadata -1 -map_chapters -1",
 	`^\@ac(\d+)$`:  "-vn -acodec ac3 -ab ${1}k -map_metadata -1 -map_chapters -1",
@@ -29,7 +29,7 @@ var regexpMap = map[string]*regexp.Regexp{
 	"duration":         regexp.MustCompile(`.*(Duration.*)`),
 	"durationHHMMSSMS": regexp.MustCompile(`.*Duration: (\d{2}\:\d{2}\:\d{2}\.\d{2}).*`),
 	"stream":           regexp.MustCompile(`.*Stream #(\d+\:\d+)(.*?):(.*)`),
-	"errors":           regexp.MustCompile(`(.*No such file.*|.*Invalid data.*|.*At least one output file must be specified.*|.*Unrecognized option.*|.*Option not found.*|.*matches no streams.*|.*not supported.*|.*Invalid argument.*|.*Error.*|.*not exist.*|.*-vf\/-af\/-filter.*|.*No such filter.*|.*does not contain.*|.*Not overwriting - exiting.*|.*denied.*|.*\[y\/N\].*|.*Trailing options were found on the commandline.*)`),
+	"errors":           regexp.MustCompile(`(.*No such file.*|.*Invalid data.*|.*At least one output file must be specified.*|.*Unrecognized option.*|.*Option not found.*|.*matches no streams.*|.*not supported.*|.*Invalid argument.*|.*Error.*|.*not exist.*|.*-vf\/-af\/-filter.*|.*No such filter.*|.*does not contain.*|.*Not overwriting - exiting.*|.*denied.*|.*\[y\/N\].*|.*Trailing options were found on the commandline.*|.*unconnected output.*)`),
 	"warnings":         regexp.MustCompile(`(.*Warning:.*|.*Past duration.*too large.*)`),
 	"encoding":         regexp.MustCompile(`.* (time=.*) bitrate=.*(\/s|N\/A).*(speed=.*)`),
 	"timeSpeed":        regexp.MustCompile(`.* time=.*?(\d{2}\:\d{2}\:\d{2}\.\d{2}).* speed=.*?(\d+\.\d+|\d+)x`),
@@ -135,8 +135,8 @@ func main() {
 						errorsArray = append(errorsArray, "\x1b[42;1mINPUT "+strconv.FormatInt(int64(i)+1, 10)+":\x1b[0m\x1b[32;1m "+file+"\x1b[0m\n")
 						errorsArray = append(errorsArray, errors...)
 						if !nologs {
-							writeStringArrayToFile(file+".err", []string{"INPUT: " + file + "\n"}, 0775)
-							writeStringArrayToFile(file+".err", errors, 0775)
+							writeStringArrayToFile(file+".#err", []string{"INPUT: " + file + "\n"}, 0775)
+							writeStringArrayToFile(file+".#err", errors, 0775)
 						}
 					}
 				}
@@ -151,7 +151,7 @@ func main() {
 			errorsArray = append(errorsArray, "\x1b[42;1mINPUT:\x1b[0m\x1b[32;1m "+firstInput+"\x1b[0m\n")
 			errorsArray = append(errorsArray, errors...)
 			if !nologs {
-				writeStringArrayToFile(firstInput+".err", errorsArray, 0775)
+				writeStringArrayToFile(firstInput+".#err", errorsArray, 0775)
 			}
 		}
 	}
