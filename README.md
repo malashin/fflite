@@ -5,12 +5,13 @@
 * Estemated encoding time and progress percentage is shown during encoding.
 * Batch execution if `.txt` file is passed as input file.
 * Command presets for less typing.
+* Error logging.
 * BEEP sound at the end of encoding process.
 * ANSI escape sequences (colors) are supported in Windows terminals (cmd, PowerShell). [go-ansi](https://github.com/k0kubun/go-ansi)
 
 ### Same syntax as [FFmpeg](https://www.ffmpeg.org/):
 ```
-fflite [global_options] {[input_file_options] -i input_file} ... {[output_file_options] output_file} ...
+fflite [fflite_option] [global_options] {[input_file_options] -i input_file} ... {[output_file_options] output_file} ...
 ```
 [FFmpeg documentation](https://www.ffmpeg.org/ffmpeg-all.html)
 
