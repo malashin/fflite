@@ -65,7 +65,7 @@ func main() {
 	// Parse all arguments and apply presets if needed.
 	// Arguments surrounded by escaped doublequotes are joined.
 	for i := 0; i < len(args); i++ {
-		if (len(args) > 2) && (args[i] == "-i") && (strings.HasSuffix(args[i+1], ".txt")) {
+		if (len(args) >= 2) && (args[i] == "-i") && (strings.HasSuffix(args[i+1], ".txt")) {
 			if batchInputName == "" {
 				batchInputName = args[i+1]
 			} else {
@@ -73,7 +73,7 @@ func main() {
 				os.Exit(1)
 			}
 		}
-		if (len(args) > 2) && (args[i] == "-i") && (firstInput == "") {
+		if (len(args) >= 2) && (args[i] == "-i") && (firstInput == "") {
 			firstInput = args[i+1]
 		}
 		if !appendArgs {
