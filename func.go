@@ -247,6 +247,7 @@ func parseErrors(line string, lastLineFull string, batchMode bool, errorsArray [
 func parseWarnings(line string, lastLineFull string, warningArray []string, warningSpam map[string]bool) (string, []string) {
 	line = strings.TrimSpace(regexpMap["warnings"].ReplaceAllString(line, "${1}"))
 	if isWarningSpamming(warningArray, line, warningSpam) {
+		line = ""
 		return line, warningArray
 	}
 	warningArray = append(warningArray, line)
@@ -503,7 +504,9 @@ func encodeFile(ffCommand []string, batchMode bool, ffmpeg bool) []string {
 				line = ""
 			}
 			lastLineFull = line
-			consolePrint(line)
+			if line != "" {
+				consolePrint(line)
+			}
 		} else {
 			// If not in ffmpeg mode, don't modify the output.
 			consolePrint(line + "\n")
