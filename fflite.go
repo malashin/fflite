@@ -13,12 +13,13 @@ import (
 )
 
 // Global variables.
-var version = "v0.1.12"
+var version = "v0.1.13"
 var presets = map[string]string{
 	`^\@crf(\d+)$`: "-an -vcodec libx264 -preset medium -crf ${1} -pix_fmt yuv420p -g 0 -map_metadata -1 -map_chapters -1",
 	`^\@ac(\d+)$`:  "-vn -acodec ac3 -ab ${1}k -map_metadata -1 -map_chapters -1",
 	`^\@nometa$`:   "-map_metadata -1 -map_chapters -1",
 	`^\@check$`:    "-f null NUL",
+	`^\@jpg$`:      "-q:v 0 -pix_fmt yuv444p -map_metadata -1",
 }
 var regexpMap = map[string]*regexp.Regexp{
 	"streamMapping":    regexp.MustCompile(`Stream mapping:`),
