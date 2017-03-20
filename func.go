@@ -265,7 +265,13 @@ func parseEncoding(line string, lastLine string, duration float64, speedArray []
 	progress := truncPad(strconv.FormatInt(int64(currentSecond/(duration/100.0)), 10), 3, 'r')
 	eta, speedArray := getETA(currentSpeed, duration, currentSecond, speedArray)
 	eta = secondsToHHMMSS(eta)
-	line = strings.TrimSpace(regexpMap["encoding"].ReplaceAllString(line, "${1} ${3}"))
+	line = strings.TrimSpace(regexpMap["encoding"].ReplaceAllString(line, "${1} ${2}"))
+	if strings.Contains(line, "dup=0 ") {
+		line = strings.Replace(line, "dup=0 ", "", -1)
+	}
+	if strings.Contains(line, "drop=0 ") {
+		line = strings.Replace(line, "drop=0 ", "", -1)
+	}
 	if len(line) < len(lastLine) {
 		line += strings.Repeat(" ", len(lastLine)-len(line))
 	}
