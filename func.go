@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"syscall"
@@ -412,14 +413,22 @@ func help() {
 	consolePrint("    version      check for updates\n")
 	consolePrint("    nologs       do not create \".err\" error log files\n")
 	consolePrint("\n\x1b[33;1mPresets:\x1b[0m\n")
+	// Find maximum length of preset keys.
 	length := 0
 	for key := range presets {
 		if len(key[2:len(key)-1]) > length {
 			length = len(key[2 : len(key)-1])
 		}
 	}
-	for key, value := range presets {
-		consolePrint("    " + key[2:len(key)-1] + strings.Repeat(" ", length-len(key[2:len(key)-1])) + "    " + value + "\n")
+	// Sort all presets alphabetically.
+	var keys []string
+	for k := range presets {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	// Print out all presets.
+	for _, key := range keys {
+		consolePrint("    " + key[2:len(key)-1] + strings.Repeat(" ", length-len(key[2:len(key)-1])) + "    " + presets[key] + "\n")
 	}
 	consolePrint("\n\x1b[33;1mFFmpeg documentation:\x1b[0m\n")
 	consolePrint("    www.ffmpeg.org/ffmpeg-all.html\n")
