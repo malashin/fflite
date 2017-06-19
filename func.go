@@ -401,17 +401,17 @@ func parseOptions(args []string) (bool, bool, []string) {
 func help() {
 	consolePrint("fflite is FFmpeg wrapper for minimalistic progress visualization while keeping the flexability of CLI.\n")
 	consolePrint("fflite version \x1b[33;1m" + version + "\x1b[0m.\n")
-	consolePrint("\n\x1b[33;1mUsage:\x1b[0m\n\n")
+	consolePrint("\n\x1b[33;1mUsage:\x1b[0m\n")
 	consolePrint("    It uses the same syntax as FFmpeg:\n\n")
 	consolePrint("    fflite [fflite_option] [global_options] {[input_file_options] -i input_file} ... {[output_file_options] output_file} ...\n\n")
 	consolePrint("    In order to pass arguments with spaces in it, surround them with escaped doublequotes \\\"input file\\\".\n")
 	consolePrint("    For batch execution pass \".txt\" file as input.\n")
 	consolePrint("    Preset arguments are replaced with specific strings.\n")
-	consolePrint("\n\x1b[33;1mOptions:\x1b[0m\n\n")
+	consolePrint("\n\x1b[33;1mOptions:\x1b[0m\n")
 	consolePrint("    ffmpeg       original ffmpeg text output\n")
 	consolePrint("    version      check for updates\n")
 	consolePrint("    nologs       do not create \".err\" error log files\n")
-	consolePrint("\n\x1b[33;1mPresets:\x1b[0m\n\n")
+	consolePrint("\n\x1b[33;1mPresets:\x1b[0m\n")
 	length := 0
 	for key := range presets {
 		if len(key[2:len(key)-1]) > length {
@@ -421,9 +421,9 @@ func help() {
 	for key, value := range presets {
 		consolePrint("    " + key[2:len(key)-1] + strings.Repeat(" ", length-len(key[2:len(key)-1])) + "    " + value + "\n")
 	}
-	consolePrint("\n\x1b[33;1mFFmpeg documentation:\x1b[0m\n\n")
+	consolePrint("\n\x1b[33;1mFFmpeg documentation:\x1b[0m\n")
 	consolePrint("    www.ffmpeg.org/ffmpeg-all.html\n")
-	consolePrint("\n\x1b[33;1mGithub page:\x1b[0m\n\n")
+	consolePrint("\n\x1b[33;1mGithub page:\x1b[0m\n")
 	consolePrint("    github.com/malashin/fflite\n")
 }
 
