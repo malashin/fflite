@@ -13,7 +13,7 @@ import (
 )
 
 // Global variables.
-var version = "v0.1.17"
+var version = "v0.1.18"
 var presets = map[string]string{
 	`^\@crf(\d+)$`: "-an -vcodec libx264 -preset medium -crf ${1} -pix_fmt yuv420p -g 0 -map_metadata -1 -map_chapters -1",
 	`^\@ac(\d+)$`:  "-vn -acodec ac3 -ab ${1}k -map_metadata -1 -map_chapters -1",
@@ -111,6 +111,10 @@ func main() {
 				os.Exit(1)
 			}
 			batchArrayLength := len(batchArray)
+			if batchArrayLength < 1 {
+				consolePrint("\x1b[31;1mERROR: \"" + batchInputName + "\" is empty\x1b[0m\n")
+				os.Exit(1)
+			}
 			// For each file.
 			for i, file := range batchArray {
 				if !sigint {
