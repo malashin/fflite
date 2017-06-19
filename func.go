@@ -259,7 +259,6 @@ func parseWarnings(line string, lastLineFull string, warningArray []string, warn
 }
 
 func parseEncoding(line string, lastLine string, duration float64, speedArray []float64) (string, string, string, []float64) {
-	consolePrint("#parseEncoding")
 	timeSpeed := strings.Split(regexpMap["timeSpeed"].ReplaceAllString(line, "$1 $2"), " ")
 	currentSecond := hhmmssmsToSeconds(timeSpeed[0])
 	currentSpeed, _ := strconv.ParseFloat(timeSpeed[1], 64)
@@ -282,7 +281,6 @@ func parseEncoding(line string, lastLine string, duration float64, speedArray []
 }
 
 func parseEncodingNoSpeed(line string, lastLine string, duration float64, startTime time.Time, prevUptime time.Duration, prevSecond float64, speedArray []float64) (string, string, string, []float64) {
-	consolePrint("#parseEncodingNoSpeed")
 	currentSecond := hhmmssmsToSeconds(regexpMap["currentSecond"].ReplaceAllString(line, "$1"))
 	currentUptime := time.Since(startTime)
 	currentSpeed := 0.0
