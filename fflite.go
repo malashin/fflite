@@ -13,7 +13,7 @@ import (
 )
 
 // Global variables.
-var version = "v0.1.18"
+var version = "v0.1.19"
 var presets = map[string]string{
 	`^\@crf(\d+)$`: "-an -vcodec libx264 -preset medium -crf ${1} -pix_fmt yuv420p -g 0 -map_metadata -1 -map_chapters -1",
 	`^\@ac(\d+)$`:  "-vn -acodec ac3 -ab ${1}k -map_metadata -1 -map_chapters -1",
@@ -66,16 +66,24 @@ func main() {
 	// Parse all arguments and apply presets if needed.
 	// Arguments surrounded by escaped doublequotes are joined.
 	for i := 0; i < len(args); i++ {
-		if (i+1 < len(args)) && (args[i] == "-i") && (strings.HasSuffix(args[i+1], ".txt")) {
-			if batchInputName == "" {
-				batchInputName = args[i+1]
-			} else {
-				consolePrint("\x1b[31;1mOnly one .txt file is allowed for batch execution.\x1b[0m\n")
-				os.Exit(1)
+		if i+1 < len(args) {
+			if (args[i] == "-i") && (strings.HasSuffix(args[i+1], ".txt")) {
+				if batchInputName == "" {
+					batchInputName = args[i+1]
+				} else {
+					consolePrint("\x1b[31;1mOnly one .txt file is allowed for batch execution.\x1b[0m\n")
+					os.Exit(1)
+				}
 			}
-		}
-		if (i+1 < len(args)) && (args[i] == "-i") && (firstInput == "") {
-			firstInput = args[i+1]
+			if (args[i] == "-i") && (firstInput == "") {
+				firstInput = args[i+1]
+			}
+			// Strip out "-loglevel" from input command.
+			if args[i] == "-loglevel" {
+				consolePrint("\x1b[33;1m! \"-loglevel\" removed from input command.\x1b[0m\n")
+				i++
+				continue
+			}
 		}
 		if !appendArgs {
 			if (args[i][0:1] == "\"") && !(args[i][len(args[i])-1:] == "\"") {
@@ -112,7 +120,7 @@ func main() {
 			}
 			batchArrayLength := len(batchArray)
 			if batchArrayLength < 1 {
-				consolePrint("\x1b[31;1mERROR: \"" + batchInputName + "\" is empty\x1b[0m\n")
+				consolePrint("\x1b[31;1mERROR: \"" + batchInputName + "\" is empty.\x1b[0m\n")
 				os.Exit(1)
 			}
 			// For each file.
