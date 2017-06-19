@@ -13,7 +13,7 @@ import (
 )
 
 // Global variables.
-var version = "v0.1.16"
+var version = "v0.1.17"
 var presets = map[string]string{
 	`^\@crf(\d+)$`: "-an -vcodec libx264 -preset medium -crf ${1} -pix_fmt yuv420p -g 0 -map_metadata -1 -map_chapters -1",
 	`^\@ac(\d+)$`:  "-vn -acodec ac3 -ab ${1}k -map_metadata -1 -map_chapters -1",
@@ -22,21 +22,21 @@ var presets = map[string]string{
 	`^\@jpg$`:      "-q:v 0 -pix_fmt yuv444p -map_metadata -1",
 }
 var regexpMap = map[string]*regexp.Regexp{
-	"streamMapping":    regexp.MustCompile(`Stream mapping:`),
-	"encodingStarted":  regexp.MustCompile(`.*Press \[q\] to stop.*`),
-	"encodingFinished": regexp.MustCompile(`.*video:.*audio.*subtitle.*other streams.*global headers.*`),
-	"input":            regexp.MustCompile(`Input #(\d+),.*from \'(.*)\'\:`),
-	"output":           regexp.MustCompile(`Output #(\d+),.*to \'(.*)\'\:`),
-	"duration":         regexp.MustCompile(`.*(Duration.*)`),
-	"durationHHMMSSMS": regexp.MustCompile(`.*Duration: (\d{2}\:\d{2}\:\d{2}\.\d{2}).*`),
-	"stream":           regexp.MustCompile(`.*Stream #(\d+\:\d+)(.*?):(.*)`),
-	"errors":           regexp.MustCompile(`(.*No such file.*|.*Invalid data.*|.*At least one output file must be specified.*|.*Unrecognized option.*|.*Option not found.*|.*matches no streams.*|.*not supported.*|.*Invalid argument.*|.*Error.*|.*not exist.*|.*-vf\/-af\/-filter.*|.*No such filter.*|.*does not contain.*|.*Not overwriting - exiting.*|.*denied.*|.*\[y\/N\].*|.*Trailing options were found on the commandline.*|.*unconnected output.*|.*Cannot create the link.*|.*Media type mismatch.*|.*moov atom not found.|.*Cannot find a matching stream.*|.*Unknown encoder.*)`),
-	"warnings":         regexp.MustCompile(`(.*Warning:.*|.*Past duration.*too large.*)`),
-	"encoding":         regexp.MustCompile(`.* (time=.*) bitrate=.*(?:\/s|N\/A)(?: |.*)(dup=.*speed=.*|speed=.*)`),
-	"timeSpeed":        regexp.MustCompile(`.* time=.*?(\d{2}\:\d{2}\:\d{2}\.\d{2}).* speed=.*?(\d+\.\d+|\d+)x`),
-	"encodingNoSpeed":  regexp.MustCompile(`.* (time=.*) bitrate=.*(\/s|N\/A)(.*)`),
-	"currentSecond":    regexp.MustCompile(`.*size=.* time=.*?(\d{2}\:\d{2}\:\d{2}\.\d{2}).*`),
-	"hide":             regexp.MustCompile(`(.*Press \[q\] to stop.*|.*Last message repeated.*)`),
+	"streamMapping":         regexp.MustCompile(`Stream mapping:`),
+	"streamMappingFinished": regexp.MustCompile(`.*Press \[q\] to stop.*`),
+	"encodingFinished":      regexp.MustCompile(`.*video:.*audio.*subtitle.*other streams.*global headers.*`),
+	"input":                 regexp.MustCompile(`Input #(\d+),.*from \'(.*)\'\:`),
+	"output":                regexp.MustCompile(`Output #(\d+),.*to \'(.*)\'\:`),
+	"duration":              regexp.MustCompile(`.*(Duration.*)`),
+	"durationHHMMSSMS":      regexp.MustCompile(`.*Duration: (\d{2}\:\d{2}\:\d{2}\.\d{2}).*`),
+	"stream":                regexp.MustCompile(`.*Stream #(\d+\:\d+)(.*?):(.*)`),
+	"errors":                regexp.MustCompile(`(.*No such file.*|.*Invalid data.*|.*At least one output file must be specified.*|.*Unrecognized option.*|.*Option not found.*|.*matches no streams.*|.*not supported.*|.*Invalid argument.*|.*Error.*|.*not exist.*|.*-vf\/-af\/-filter.*|.*No such filter.*|.*does not contain.*|.*Not overwriting - exiting.*|.*denied.*|.*\[y\/N\].*|.*Trailing options were found on the commandline.*|.*unconnected output.*|.*Cannot create the link.*|.*Media type mismatch.*|.*moov atom not found.|.*Cannot find a matching stream.*|.*Unknown encoder.*)`),
+	"warnings":              regexp.MustCompile(`(.*Warning:.*|.*Past duration.*too large.*)`),
+	"encoding":              regexp.MustCompile(`.* (time=.*) bitrate=.*(?:\/s|N\/A)(?: |.*)(dup=.*speed=.*|speed=.*)`),
+	"timeSpeed":             regexp.MustCompile(`.* time=.*?(\d{2}\:\d{2}\:\d{2}\.\d{2}).* speed=.*?(\d+\.\d+|\d+)x`),
+	"encodingNoSpeed":       regexp.MustCompile(`.* (time=.*) bitrate=.*(\/s|N\/A)(.*)`),
+	"currentSecond":         regexp.MustCompile(`.*size=.* time=.*?(\d{2}\:\d{2}\:\d{2}\.\d{2}).*`),
+	"hide":                  regexp.MustCompile(`(.*Press \[q\] to stop.*|.*Last message repeated.*)`),
 }
 
 func main() {
