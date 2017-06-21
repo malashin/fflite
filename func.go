@@ -281,8 +281,8 @@ func parseEncoding(line string, lastLineFull string, duration float64, speedArra
 	} else {
 		line = "\x1b[33;1m" + progress + "\x1b[0m " + line
 	}
-	if regexpMap["\\r"].MatchString(lastLineFull) && (len(line) < len(lastLineFull)) {
-		line += strings.Repeat(" ", len(lastLineFull)-len(line))
+	if (len(lastLineFull) > 0) && (lastLineFull[len(lastLineFull)-1] == '\r') && (len(line) < len(strings.TrimSpace(lastLineFull))) {
+		line += strings.Repeat(" ", len(strings.TrimSpace(lastLineFull))-len(line))
 	}
 	line += "\r"
 	return line, lastLine, progress, speedArray
@@ -313,8 +313,8 @@ func parseEncodingNoSpeed(line string, lastLineFull string, duration float64, st
 	} else {
 		line = "\x1b[33;1m" + progress + "\x1b[0m " + line + " speed=" + strconv.FormatFloat(currentSpeed, 'f', 2, 64) + "x"
 	}
-	if regexpMap["\\r"].MatchString(lastLineFull) && (len(line) < len(lastLineFull)) {
-		line += strings.Repeat(" ", len(lastLineFull)-len(line))
+	if (len(lastLineFull) > 0) && (lastLineFull[len(lastLineFull)-1] == '\r') && (len(line) < len(strings.TrimSpace(lastLineFull))) {
+		line += strings.Repeat(" ", len(strings.TrimSpace(lastLineFull))-len(line))
 	}
 	line += "\r"
 	return line, lastLine, progress, speedArray
@@ -547,7 +547,7 @@ func encodeFile(ffCommand []string, batchMode bool, ffmpeg bool) []string {
 			default:
 				line = ""
 			}
-			lastLineFull = strings.TrimSpace(line)
+			lastLineFull = line
 			if line != "" {
 				consolePrint(line)
 			}
