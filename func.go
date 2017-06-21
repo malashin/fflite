@@ -378,10 +378,19 @@ func argsPreset(input string) []string {
 func getUpstreamVersion() string {
 	resp, err := http.Get("https://raw.githubusercontent.com/malashin/fflite/master/fflite.go")
 	if err != nil {
-		log.Panic(err)
+		consolePrint("\x1b[31;1m")
+		consolePrint(err)
+		consolePrint("\x1b[0m\n")
+		return ""
 	}
 	defer resp.Body.Close()
 	bytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		consolePrint("\x1b[31;1m")
+		consolePrint(err)
+		consolePrint("\x1b[0m\n")
+		return ""
+	}
 	r := regexp.MustCompile(`var version = "(.*)"`)
 	version := r.FindString(string(bytes))
 	version = r.ReplaceAllString(version, "$1")
@@ -413,7 +422,6 @@ func parseOptions(args []string) (bool, bool, []string) {
 			consolePrint("\x1b[32;1mYour fflite is up to date.\x1b[0m\n")
 		}
 		os.Exit(0)
-
 	}
 	return ffmpeg, nologs, args
 }
@@ -425,7 +433,7 @@ func help() {
 	consolePrint("\n\x1b[33;1mUsage:\x1b[0m\n")
 	consolePrint("    It uses the same syntax as FFmpeg:\n\n")
 	consolePrint("    fflite [fflite_option] [global_options] {[input_file_options] -i input_file} ... {[output_file_options] output_file} ...\n\n")
-	consolePrint("    In order to pass arguments with spaces in it, surround them with escaped doublequotes \\\"input file\\\".\n")
+	consolePrint("    In order to pass arguments with spaces in it, surround them with escaped doublequotes \\\"argument with spaces\\\".\n")
 	consolePrint("    For batch execution pass \".txt\" file as input.\n")
 	consolePrint("    Preset arguments are replaced with specific strings.\n")
 	consolePrint("\n\x1b[33;1mOptions:\x1b[0m\n")
