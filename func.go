@@ -259,13 +259,12 @@ func parseWarnings(line string, lastLineFull string, warningArray []string, warn
 	return line, warningArray
 }
 
-func parseEncoding(line string, lastLine string, duration float64, speedArray []float64) (string, string, string, []float64) {
+func parseEncoding(line string, lastLineFull string, duration float64, speedArray []float64) (string, string, string, []float64) {
 	timeSpeed := strings.Split(regexpMap["timeSpeed"].ReplaceAllString(line, "$1 $2"), " ")
 	currentSecond := hhmmssmsToSeconds(timeSpeed[0])
 	currentSpeed, _ := strconv.ParseFloat(timeSpeed[1], 64)
-	progress := truncPad(strconv.FormatInt(int64(currentSecond/(duration/100.0)), 10), 3, 'r')
-	eta, speedArray := getETA(currentSpeed, duration, currentSecond, speedArray)
-	eta = secondsToHHMMSS(eta)
+	progress := "N\\A"
+	eta := "N\\A"
 	line = strings.TrimSpace(regexpMap["encoding"].ReplaceAllString(line, "${1} ${2}"))
 	if strings.Contains(line, "dup=0 ") {
 		line = strings.Replace(line, "dup=0 ", "", -1)
@@ -273,30 +272,51 @@ func parseEncoding(line string, lastLine string, duration float64, speedArray []
 	if strings.Contains(line, "drop=0 ") {
 		line = strings.Replace(line, "drop=0 ", "", -1)
 	}
-	if len(line) < len(lastLine) {
-		line += strings.Repeat(" ", len(lastLine)-len(line))
+	lastLine := line
+	if duration > 0 {
+		progress = truncPad(strconv.FormatInt(int64(currentSecond/(duration/100.0)), 10), 3, 'r')
+		eta, speedArray = getETA(currentSpeed, duration, currentSecond, speedArray)
+		eta = secondsToHHMMSS(eta)
+		line = "\x1b[33;1m" + progress + "%\x1b[0m eta=" + eta + " " + line
+	} else {
+		line = "\x1b[33;1m" + progress + "\x1b[0m " + line
 	}
-	lastLine = line
-	line = "\x1b[33;1m" + progress + "%\x1b[0m eta=" + eta + " " + line + "\r"
+	if regexpMap["\\r"].MatchString(lastLineFull) && (len(line) < len(lastLineFull)) {
+		line += strings.Repeat(" ", len(lastLineFull)-len(line))
+	}
+	line += "\r"
 	return line, lastLine, progress, speedArray
 }
 
-func parseEncodingNoSpeed(line string, lastLine string, duration float64, startTime time.Time, prevUptime time.Duration, prevSecond float64, speedArray []float64) (string, string, string, []float64) {
+func parseEncodingNoSpeed(line string, lastLineFull string, duration float64, startTime time.Time, prevUptime time.Duration, prevSecond float64, speedArray []float64) (string, string, string, []float64) {
 	currentSecond := hhmmssmsToSeconds(regexpMap["currentSecond"].ReplaceAllString(line, "$1"))
 	currentUptime := time.Since(startTime)
 	currentSpeed := 0.0
 	if currentUptime-prevUptime > 0 {
 		currentSpeed = (currentSecond - prevSecond) / (currentUptime - prevUptime).Seconds()
 	}
-	progress := truncPad(strconv.FormatInt(int64(currentSecond/(duration/100.0)), 10), 3, 'r')
-	eta, speedArray := getETA(currentSpeed, duration, currentSecond, speedArray)
-	eta = secondsToHHMMSS(eta)
+	progress := "N\\A"
+	eta := "N\\A"
 	line = strings.TrimSpace(regexpMap["encodingNoSpeed"].ReplaceAllString(line, "${1}${3}"))
-	if len(line) < len(lastLine) {
-		line += strings.Repeat(" ", len(lastLine)-len(line))
+	if strings.Contains(line, "dup=0 ") {
+		line = strings.Replace(line, "dup=0 ", "", -1)
 	}
-	lastLine = line
-	line = "\x1b[33;1m" + progress + "%\x1b[0m eta=" + eta + " " + line + " speed=" + strconv.FormatFloat(currentSpeed, 'f', 2, 64) + "x\r"
+	if strings.Contains(line, "drop=0 ") {
+		line = strings.Replace(line, "drop=0 ", "", -1)
+	}
+	lastLine := line
+	if duration > 0 {
+		progress := truncPad(strconv.FormatInt(int64(currentSecond/(duration/100.0)), 10), 3, 'r')
+		eta, speedArray = getETA(currentSpeed, duration, currentSecond, speedArray)
+		eta = secondsToHHMMSS(eta)
+		line = "\x1b[33;1m" + progress + "%\x1b[0m eta=" + eta + " " + line + " speed=" + strconv.FormatFloat(currentSpeed, 'f', 2, 64) + "x"
+	} else {
+		line = "\x1b[33;1m" + progress + "\x1b[0m " + line + " speed=" + strconv.FormatFloat(currentSpeed, 'f', 2, 64) + "x"
+	}
+	if regexpMap["\\r"].MatchString(lastLineFull) && (len(line) < len(lastLineFull)) {
+		line += strings.Repeat(" ", len(lastLineFull)-len(line))
+	}
+	line += "\r"
 	return line, lastLine, progress, speedArray
 }
 
@@ -509,9 +529,9 @@ func encodeFile(ffCommand []string, batchMode bool, ffmpeg bool) []string {
 			case regexpMap["warnings"].MatchString(line):
 				line, warningArray = parseWarnings(line, lastLineFull, warningArray, warningSpam)
 			case regexpMap["encoding"].MatchString(line):
-				line, lastLine, progress, speedArray = parseEncoding(line, lastLine, duration, speedArray)
+				line, lastLine, progress, speedArray = parseEncoding(line, lastLineFull, duration, speedArray)
 			case regexpMap["encodingNoSpeed"].MatchString(line):
-				line, lastLine, progress, speedArray = parseEncodingNoSpeed(line, lastLine, duration, startTime, prevUptime, prevSecond, speedArray)
+				line, lastLine, progress, speedArray = parseEncodingNoSpeed(line, lastLineFull, duration, startTime, prevUptime, prevSecond, speedArray)
 			case regexpMap["hide"].MatchString(line):
 				line = ""
 			case encodingStarted:

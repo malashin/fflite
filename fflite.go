@@ -13,15 +13,15 @@ import (
 )
 
 // Global variables.
-var version = "v0.1.20"
+var version = "v0.1.21"
 var presets = map[string]string{
 	`^\@crf(\d+)$`: "-an -vcodec libx264 -preset medium -crf ${1} -pix_fmt yuv420p -g 0 -map_metadata -1 -map_chapters -1",
 	`^\@ac(\d+)$`:  "-vn -acodec ac3 -ab ${1}k -map_metadata -1 -map_chapters -1",
 	`^\@nometa$`:   "-map_metadata -1 -map_chapters -1",
 	`^\@check$`:    "-f null NUL",
 	`^\@jpg$`:      "-q:v 0 -pix_fmt yuv444p -map_metadata -1",
-	`^\@dcpscale$`: "-an -vcodec libx264 -preset medium -crf 13 -pix_fmt yuv420p -g 0 -vf scale=1920:trunc(ih/(iw/1920)),pad=1920:1080:0:(oh-ih)/2,setsar=1/1 -map_metadata -1 -map_chapters -1",
-	`^\@dcpcrop$`:  "-an -vcodec libx264 -preset medium -crf 13 -pix_fmt yuv420p -g 0 -vf crop=1920:ih:(iw-1920)/2:0,pad=1920:1080:0:(oh-ih)/2,setsar=1/1 -map_metadata -1 -map_chapters -1",
+	`^\@dcpscale$`: "-loglevel error -stats -an -vcodec libx264 -preset medium -crf 13 -pix_fmt yuv420p -g 0 -vf scale=1920:trunc(ih/(iw/1920)),pad=1920:1080:0:(oh-ih)/2,setsar=1/1 -map_metadata -1 -map_chapters -1",
+	`^\@dcpcrop$`:  "-loglevel error -stats -an -vcodec libx264 -preset medium -crf 13 -pix_fmt yuv420p -g 0 -vf crop=1920:ih:(iw-1920)/2:0,pad=1920:1080:0:(oh-ih)/2,setsar=1/1 -map_metadata -1 -map_chapters -1",
 	`^\@sdpal$`:    "-vf scale=720:576,setsar=64/45,unsharp=3:3:0.3:3:3:0",
 }
 var regexpMap = map[string]*regexp.Regexp{
@@ -36,10 +36,11 @@ var regexpMap = map[string]*regexp.Regexp{
 	"errors":                regexp.MustCompile(`(.*No such file.*|.*Invalid data.*|.*At least one output file must be specified.*|.*Unrecognized option.*|.*Option not found.*|.*matches no streams.*|.*not supported.*|.*Invalid argument.*|.*Error.*|.*not exist.*|.*-vf\/-af\/-filter.*|.*No such filter.*|.*does not contain.*|.*Not overwriting - exiting.*|.*denied.*|.*\[y\/N\].*|.*Trailing options were found on the commandline.*|.*unconnected output.*|.*Cannot create the link.*|.*Media type mismatch.*|.*moov atom not found.|.*Cannot find a matching stream.*|.*Unknown encoder.*)`),
 	"warnings":              regexp.MustCompile(`(.*Warning:.*|.*Past duration.*too large.*)`),
 	"encoding":              regexp.MustCompile(`.* (time=.*) bitrate=.*(?:\/s|N\/A)(?: |.*)(dup=.*speed=.*|speed=.*)`),
-	"timeSpeed":             regexp.MustCompile(`.* time=.*?(\d{2}\:\d{2}\:\d{2}\.\d{2}).* speed=.*?(\d+\.\d+|\d+)x`),
 	"encodingNoSpeed":       regexp.MustCompile(`.* (time=.*) bitrate=.*(\/s|N\/A)(.*)`),
+	"timeSpeed":             regexp.MustCompile(`.* time=.*?(\d{2}\:\d{2}\:\d{2}\.\d{2}).* speed=.*?(\d+\.\d+|\d+)x`),
 	"currentSecond":         regexp.MustCompile(`.*size=.* time=.*?(\d{2}\:\d{2}\:\d{2}\.\d{2}).*`),
 	"hide":                  regexp.MustCompile(`(.*Press \[q\] to stop.*|.*Last message repeated.*)`),
+	"\\r":                   regexp.MustCompile(`\r$`),
 }
 
 func main() {
@@ -80,12 +81,6 @@ func main() {
 			}
 			if (args[i] == "-i") && (firstInput == "") {
 				firstInput = args[i+1]
-			}
-			// Strip out "-loglevel" from input command.
-			if args[i] == "-loglevel" {
-				consolePrint("\x1b[33;1m! \"-loglevel\" removed from input command.\x1b[0m\n")
-				i++
-				continue
 			}
 		}
 		if !appendArgs {
