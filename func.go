@@ -539,7 +539,7 @@ func encodeFile(ffCommand []string, batchMode bool, ffmpeg bool) []string {
 			default:
 				line = ""
 			}
-			lastLineFull = line
+			lastLineFull = strings.TrimSpace(line)
 			if line != "" {
 				consolePrint(line)
 			}
