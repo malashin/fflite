@@ -34,7 +34,7 @@ var regexpMap = map[string]*regexp.Regexp{
 	"durationHHMMSSMS":      regexp.MustCompile(`.*Duration: (\d{2}\:\d{2}\:\d{2}\.\d{2}).*`),
 	"stream":                regexp.MustCompile(`.*Stream #(\d+\:\d+)(.*?):(.*)`),
 	"errors":                regexp.MustCompile(`(.*No such file.*|.*Invalid data.*|.*At least one output file must be specified.*|.*Unrecognized option.*|.*Option not found.*|.*matches no streams.*|.*not supported.*|.*Invalid argument.*|.*Error.*|.*not exist.*|.*-vf\/-af\/-filter.*|.*No such filter.*|.*does not contain.*|.*Not overwriting - exiting.*|.*denied.*|.*\[y\/N\].*|.*Trailing options were found on the commandline.*|.*unconnected output.*|.*Cannot create the link.*|.*Media type mismatch.*|.*moov atom not found.|.*Cannot find a matching stream.*|.*Unknown encoder.*)`),
-	"warnings":              regexp.MustCompile(`(.*Warning:.*|.*Past duration.*too large.*)`),
+	"warnings":              regexp.MustCompile(`(.*Warning:.*|.*Past duration.*too large.*|.*Starting second pass.*)`),
 	"encoding":              regexp.MustCompile(`.* (time=.*) bitrate=.*(?:\/s|N\/A)(?: |.*)(dup=.*speed=.*|speed=.*)`),
 	"encodingNoSpeed":       regexp.MustCompile(`.* (time=.*) bitrate=.*(\/s|N\/A)(.*)`),
 	"timeSpeed":             regexp.MustCompile(`.* time=.*?(\d{2}\:\d{2}\:\d{2}\.\d{2}).* speed=.*?(\d+\.\d+|\d+)x`),
