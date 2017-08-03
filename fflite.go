@@ -13,7 +13,7 @@ import (
 )
 
 // Global variables.
-var version = "v0.1.21"
+var version = "v0.1.22"
 var presets = map[string]string{
 	`^\@crf(\d+)$`: "-an -vcodec libx264 -preset medium -crf ${1} -pix_fmt yuv420p -g 0 -map_metadata -1 -map_chapters -1",
 	`^\@ac(\d+)$`:  "-vn -acodec ac3 -ab ${1}k -map_metadata -1 -map_chapters -1",
@@ -95,6 +95,7 @@ func main() {
 			if args[i][len(args[i])-1:] == "\"" {
 				lastArgs = lastArgs + " " + args[i]
 				ffCommand = append(ffCommand, strings.Replace(lastArgs, "\"", "", -1))
+				lastArgs = ""
 				appendArgs = false
 			} else {
 				lastArgs = lastArgs + " " + args[i]
