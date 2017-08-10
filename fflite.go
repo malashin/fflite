@@ -13,7 +13,7 @@ import (
 )
 
 // Global variables.
-var version = "v0.1.22"
+var version = "v0.1.23"
 var presets = map[string]string{
 	`^\@crf(\d+)$`: "-an -vcodec libx264 -preset medium -crf ${1} -pix_fmt yuv420p -g 0 -map_metadata -1 -map_chapters -1",
 	`^\@ac(\d+)$`:  "-vn -acodec ac3 -ab ${1}k -map_metadata -1 -map_chapters -1",
@@ -40,13 +40,14 @@ var regexpMap = map[string]*regexp.Regexp{
 	"timeSpeed":             regexp.MustCompile(`.* time=.*?(\d{2}\:\d{2}\:\d{2}\.\d{2}).* speed=.*?(\d+\.\d+|\d+)x`),
 	"currentSecond":         regexp.MustCompile(`.*size=.* time=.*?(\d{2}\:\d{2}\:\d{2}\.\d{2}).*`),
 	"hide":                  regexp.MustCompile(`(.*Press \[q\] to stop.*|.*Last message repeated.*)`),
+	"crop":                  regexp.MustCompile(`.*cropdetect.*(crop=(\d+):(\d+):(\d+):(\d+)).*`),
 }
 
 func main() {
 	// Main variables.
-	var lastArgs, batchInputName, firstInput string
+	var batchInputName, firstInput string
 	var errorsArray []string
-	var sigint, appendArgs, ffmpeg, nologs bool
+	var sigint, ffmpeg, nologs, crop bool
 	// Intercept interrupt signal
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
@@ -62,7 +63,7 @@ func main() {
 		help()
 		os.Exit(0)
 	}
-	ffmpeg, nologs, args = parseOptions(args)
+	ffmpeg, nologs, crop, args = parseOptions(args)
 	// Create slice containing arguments of ffmpeg command.
 	// Use "-hide_banner" as default.
 	ffCommand := []string{"-hide_banner"}
@@ -80,27 +81,13 @@ func main() {
 			}
 			if (args[i] == "-i") && (firstInput == "") {
 				firstInput = args[i+1]
+				if crop {
+					cropDetect(firstInput)
+					os.Exit(1)
+				}
 			}
 		}
-		if !appendArgs {
-			if (args[i][0:1] == "\"") && !(args[i][len(args[i])-1:] == "\"") {
-				lastArgs += args[i]
-				appendArgs = true
-			} else if (args[i][0:1] == "\"") && (args[i][len(args[i])-1:] == "\"") {
-				ffCommand = append(ffCommand, argsPreset(strings.Replace(args[i], "\"", "", -1))...)
-			} else {
-				ffCommand = append(ffCommand, argsPreset(args[i])...)
-			}
-		} else {
-			if args[i][len(args[i])-1:] == "\"" {
-				lastArgs = lastArgs + " " + args[i]
-				ffCommand = append(ffCommand, strings.Replace(lastArgs, "\"", "", -1))
-				lastArgs = ""
-				appendArgs = false
-			} else {
-				lastArgs = lastArgs + " " + args[i]
-			}
-		}
+		ffCommand = append(ffCommand, argsPreset(args[i])...)
 	}
 	// If .txt file is passed as input start batch process.
 	// .txt input will be replaced with each line from that file.

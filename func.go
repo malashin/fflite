@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"math"
@@ -366,13 +367,13 @@ func writeStringArrayToFile(filename string, strArray []string, perm os.FileMode
 
 // argsPreset replaces passed arguments with preset values.
 func argsPreset(input string) []string {
-	out := input
+	out := []string{input}
 	for key, value := range presets {
 		if r := regexp.MustCompile(key); r.MatchString(input) {
-			out = r.ReplaceAllString(input, value)
+			out = strings.Split(r.ReplaceAllString(input, value), " ")
 		}
 	}
-	return strings.Split(out, " ")
+	return out
 }
 
 func getUpstreamVersion() string {
@@ -397,8 +398,8 @@ func getUpstreamVersion() string {
 	return version
 }
 
-func parseOptions(args []string) (bool, bool, []string) {
-	var ffmpeg, nologs bool
+func parseOptions(args []string) (bool, bool, bool, []string) {
+	var ffmpeg, nologs, crop bool
 	switch args[0] {
 	// "ffmpeg" run the same command in ffmpeg instead of fflite.
 	case "ffmpeg":
@@ -422,8 +423,10 @@ func parseOptions(args []string) (bool, bool, []string) {
 			consolePrint("\x1b[32;1mYour fflite is up to date.\x1b[0m\n")
 		}
 		os.Exit(0)
+	case "crop":
+		crop = true
 	}
-	return ffmpeg, nologs, args
+	return ffmpeg, nologs, crop, args
 }
 
 // help returns usage information and programm version.
@@ -433,7 +436,6 @@ func help() {
 	consolePrint("\n\x1b[33;1mUsage:\x1b[0m\n")
 	consolePrint("    It uses the same syntax as FFmpeg:\n\n")
 	consolePrint("    fflite [fflite_option] [global_options] {[input_file_options] -i input_file} ... {[output_file_options] output_file} ...\n\n")
-	consolePrint("    In order to pass arguments with spaces in it, surround them with escaped doublequotes \\\"argument with spaces\\\".\n")
 	consolePrint("    For batch execution pass \".txt\" file as input.\n")
 	consolePrint("    Preset arguments are replaced with specific strings.\n")
 	consolePrint("\n\x1b[33;1mOptions:\x1b[0m\n")
@@ -464,9 +466,62 @@ func help() {
 	consolePrint("    github.com/malashin/fflite\n")
 }
 
+// cropDetect parses the input file for the necessary cropping parameters.
+func cropDetect(firstInput string) {
+	cropDetectCount := 5
+	cropDetectDur := "3" // Two seconds in ffmpeg format
+	cropDetectParams := "0.1:2:0"
+
+	cmd := exec.Command("ffmpeg", "-hide_banner", "-i", firstInput)
+	stdoutStderr, err := cmd.CombinedOutput()
+	if err != nil && fmt.Sprint(err) != "exit status 1" {
+		consolePrint("\x1b[31;1m")
+		consolePrint(err)
+		consolePrint("\x1b[0m\n")
+	}
+	output := string(regexpMap["durationHHMMSSMS"].Find(stdoutStderr))
+	duration := hhmmssmsToSeconds(regexpMap["durationHHMMSSMS"].ReplaceAllString(output, "${1}"))
+	// var cropArrayGlobal []crop
+	for i := 1; i <= cropDetectCount; i++ {
+		var cropArrayLocal []crop
+		tempDur := duration * float64(i) / (float64(cropDetectCount) + 1.0)
+		cmd := exec.Command("ffmpeg", "-hide_banner", "-ss", strconv.FormatFloat(tempDur, 'f', -1, 64), "-i", firstInput, "-vf", "select='eq(pict_type\\,I)',cropdetect="+cropDetectParams, "-t", cropDetectDur, "-an", "-f", "null", "nul")
+		stdoutStderr, err := cmd.CombinedOutput()
+		if err != nil {
+			consolePrint("\x1b[31;1m")
+			consolePrint(err)
+			consolePrint("\x1b[0m\n")
+		}
+		cropLines := regexpMap["crop"].FindAll(stdoutStderr, -1)
+		for _, v := range cropLines {
+			w, _ := strconv.Atoi(regexpMap["crop"].ReplaceAllString(string(v), "${2}"))
+			h, _ := strconv.Atoi(regexpMap["crop"].ReplaceAllString(string(v), "${3}"))
+			x, _ := strconv.Atoi(regexpMap["crop"].ReplaceAllString(string(v), "${4}"))
+			y, _ := strconv.Atoi(regexpMap["crop"].ReplaceAllString(string(v), "${5}"))
+			crop := crop{w, h, x, y}
+			cropArrayLocal = append(cropArrayLocal, crop)
+		}
+		// for _, v := range cropArrayLocal {
+		// 	xl := v.x
+		// 	xr :=
+		// 	yt := v.y
+		// 	yb :=
+		// }
+		consolePrint(cropArrayLocal)
+		consolePrint("\n")
+	}
+}
+
+type crop struct {
+	w int
+	h int
+	x int
+	y int
+}
+
 // encodeFile starts ffmpeg command witch passed arguments in ffCommand []string array.
 func encodeFile(ffCommand []string, batchMode bool, ffmpeg bool) []string {
-	var progress, lastLine, lastLineUsed, lastLineFull string
+	var printCommand, progress, lastLine, lastLineUsed, lastLineFull string
 	var errorsArray, warningArray []string
 	var duration, prevSecond float64
 	var speedArray []float64
@@ -485,8 +540,16 @@ func encodeFile(ffCommand []string, batchMode bool, ffmpeg bool) []string {
 		sigint = true
 	}()
 
-	// Print out the final ffmpeg command.
-	consolePrint("\x1b[36;1m> \x1b[30;1m" + "ffmpeg " + strings.Join(ffCommand[1:], " ") + "\x1b[0m\n")
+	// Print out the final ffmpeg command and add quotes to arguments that contain spaces.
+	printCommand = "\x1b[36;1m> \x1b[30;1m" + "ffmpeg"
+	for _, v := range ffCommand[1:] {
+		if strings.Contains(v, " ") {
+			v = "\"" + v + "\""
+		}
+		printCommand += " " + v
+	}
+	printCommand += "\x1b[0m\n"
+	consolePrint(printCommand)
 	// Create exec command to start ffmpeg with.
 	cmd := exec.Command("ffmpeg", ffCommand...)
 	// Pipe stderr (default ffmpeg info channel) to terminal.
