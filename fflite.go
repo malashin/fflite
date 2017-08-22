@@ -13,7 +13,7 @@ import (
 )
 
 // Global variables.
-var version = "v0.1.24"
+var version = "v0.1.25"
 var presets = map[string]string{
 	`^\@crf(\d+)$`: "-an -vcodec libx264 -preset medium -crf ${1} -pix_fmt yuv420p -g 0 -map_metadata -1 -map_chapters -1",
 	`^\@ac(\d+)$`:  "-vn -acodec ac3 -ab ${1}k -map_metadata -1 -map_chapters -1",
@@ -27,7 +27,7 @@ var presets = map[string]string{
 var regexpMap = map[string]*regexp.Regexp{
 	"streamMapping":         regexp.MustCompile(`Stream mapping:`),
 	"streamMappingFinished": regexp.MustCompile(`.*Press \[q\] to stop.*`),
-	"encodingFinished":      regexp.MustCompile(`.*video:.*audio.*subtitle.*other streams.*global headers.*`),
+	"encodingFinished":      regexp.MustCompile(`.*video:.*audio:.*subtitle:.*global headers:.*`),
 	"input":                 regexp.MustCompile(`Input #(\d+),.*from \'(.*)\'\:`),
 	"output":                regexp.MustCompile(`Output #(\d+),.*to \'(.*)\'\:`),
 	"duration":              regexp.MustCompile(`.*(Duration.*)`),
