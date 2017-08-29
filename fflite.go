@@ -19,7 +19,7 @@ var presets = map[string]string{
 	`^\@ac(\d+)$`:  "-vn -acodec ac3 -ab ${1}k -map_metadata -1 -map_chapters -1",
 	`^\@nometa$`:   "-map_metadata -1 -map_chapters -1",
 	`^\@check$`:    "-f null NUL",
-	`^\@jpg$`:      "-q:v 0 -pix_fmt yuv444p -map_metadata -1",
+	`^\@jpg$`:      "-q:v 0 -pix_fmt rgb24 -map_metadata -1",
 	`^\@dcpscale$`: "-loglevel error -stats -an -vcodec libx264 -preset medium -crf 13 -pix_fmt yuv420p -g 0 -vf scale=1920:trunc(ih/(iw/1920)),pad=1920:1080:0:(oh-ih)/2,setsar=1/1 -map_metadata -1 -map_chapters -1",
 	`^\@dcpcrop$`:  "-loglevel error -stats -an -vcodec libx264 -preset medium -crf 13 -pix_fmt yuv420p -g 0 -vf crop=1920:ih:(iw-1920)/2:0,pad=1920:1080:0:(oh-ih)/2,setsar=1/1 -map_metadata -1 -map_chapters -1",
 	`^\@sdpal$`:    "-vf scale=720:576,setsar=64/45,unsharp=3:3:0.3:3:3:0",
