@@ -17,6 +17,7 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	"unicode/utf8"
 
 	ansi "github.com/k0kubun/go-ansi"
 )
@@ -153,13 +154,13 @@ func getETA(currentSpeed, duration, currentSecond float64, speedArray []float64)
 // If side is 'r' the sring is padded and aligned to the right side.
 // Otherwise it is aligned to the left side.
 func truncPad(s string, n int, side byte) string {
-	if len(s) > n {
-		return s[0:n-3] + "\x1b[30;1m...\x1b[0m"
+	if utf8.RuneCountInString(s) > n {
+		return string([]rune(s)[0:n-3]) + "\x1b[30;1m...\x1b[0m"
 	}
 	if side == 'r' {
-		return strings.Repeat(" ", n-len(s)) + s
+		return strings.Repeat(" ", n-utf8.RuneCountInString(s)) + s
 	}
-	return s + strings.Repeat(" ", n-len(s))
+	return s + strings.Repeat(" ", n-utf8.RuneCountInString(s))
 }
 
 // stringIndexInSlice returns the index of the first instance of str in slice,
