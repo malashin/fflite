@@ -471,7 +471,7 @@ func help() {
 // cropDetect parses the input file for the necessary cropping parameters.
 func cropDetect(firstInput string) {
 	cropDetectCount := 5
-	cropDetectDur := "3" // Two seconds in ffmpeg format
+	cropDetectDur := "4" // Two seconds in ffmpeg format
 	cropDetectParams := "0.1:2:0"
 
 	cmd := exec.Command("ffmpeg", "-hide_banner", "-i", firstInput)
