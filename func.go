@@ -471,8 +471,8 @@ func help() {
 // cropDetect parses the input file for the necessary cropping parameters.
 func cropDetect(firstInput string) {
 	cropDetectCount := 5
-	cropDetectDur := "4" // Two seconds in ffmpeg format
-	cropDetectParams := "0.1:2:0"
+	cropDetectDur := "2" // One second in ffmpeg format
+	cropDetectParams := "0.12:2:0"
 
 	cmd := exec.Command("ffmpeg", "-hide_banner", "-i", firstInput)
 	stdoutStderr, err := cmd.CombinedOutput()
@@ -487,7 +487,7 @@ func cropDetect(firstInput string) {
 	for i := 1; i <= cropDetectCount; i++ {
 		var cropArrayLocal []crop
 		tempDur := duration * float64(i) / (float64(cropDetectCount) + 1.0)
-		cmd := exec.Command("ffmpeg", "-hide_banner", "-ss", strconv.FormatFloat(tempDur, 'f', -1, 64), "-i", firstInput, "-vf", "select='eq(pict_type\\,I)',cropdetect="+cropDetectParams, "-t", cropDetectDur, "-an", "-f", "null", "nul")
+		cmd := exec.Command("ffmpeg", "-hide_banner", "-ss", strconv.FormatFloat(tempDur, 'f', -1, 64), "-i", firstInput, "-vf", "cropdetect="+cropDetectParams, "-t", cropDetectDur, "-an", "-f", "null", "nul")
 		stdoutStderr, err := cmd.CombinedOutput()
 		if err != nil {
 			consolePrint("\x1b[31;1m")
