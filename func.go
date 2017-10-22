@@ -194,9 +194,9 @@ func readLines(path string) ([]string, error) {
 
 // consolePrint prints str to console while cursor is hidden.
 func consolePrint(str ...interface{}) {
-	ansi.Print("\x1b[?25l") // Hide the cursor.
+	ansi.CursorHide()
 	ansi.Print(str...)
-	ansi.Print("\x1b[?25h") // Show the cursor.
+	ansi.CursorShow()
 }
 
 // isWarningSpamming checks if warning message comes up too often and omits it if needed.
@@ -474,7 +474,7 @@ func cropDetect(firstInput string) {
 	cropDetectDur := "2" // One second in ffmpeg format
 	cropDetectParams := "0.12:2:0"
 
-	cmd := exec.Command("ffmpeg", "-hide_banner", "-i", firstInput)
+	cmd := exec.Command("ffmpeg", "-i", firstInput)
 	stdoutStderr, err := cmd.CombinedOutput()
 	if err != nil && fmt.Sprint(err) != "exit status 1" {
 		consolePrint("\x1b[31;1m")
@@ -487,7 +487,7 @@ func cropDetect(firstInput string) {
 	for i := 1; i <= cropDetectCount; i++ {
 		var cropArrayLocal []crop
 		tempDur := duration * float64(i) / (float64(cropDetectCount) + 1.0)
-		cmd := exec.Command("ffmpeg", "-hide_banner", "-ss", strconv.FormatFloat(tempDur, 'f', -1, 64), "-i", firstInput, "-vf", "cropdetect="+cropDetectParams, "-t", cropDetectDur, "-an", "-f", "null", "nul")
+		cmd := exec.Command("ffmpeg", "-ss", strconv.FormatFloat(tempDur, 'f', -1, 64), "-i", firstInput, "-vf", "cropdetect="+cropDetectParams, "-t", cropDetectDur, "-an", "-f", "null", "nul")
 		stdoutStderr, err := cmd.CombinedOutput()
 		if err != nil {
 			consolePrint("\x1b[31;1m")
