@@ -544,7 +544,7 @@ func encodeFile(ffCommand []string, batchMode bool, ffmpeg bool) []string {
 
 	// Print out the final ffmpeg command and add quotes to arguments that contain spaces.
 	printCommand = "\x1b[36;1m> \x1b[30;1m" + "ffmpeg"
-	for _, v := range ffCommand[1:] {
+	for _, v := range ffCommand {
 		if strings.Contains(v, " ") {
 			v = "\"" + v + "\""
 		}
