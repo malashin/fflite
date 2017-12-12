@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
@@ -173,6 +174,15 @@ func stringIndexInSlice(slice []string, str string) int {
 		}
 	}
 	return -1
+}
+
+// sliceFromFileOrGlob returns slice of strings, each string is a line in input file if batchFile is true.
+// Otherwise input is read as a glob pattern.
+func sliceFromFileOrGlob(input string, batchFile bool) ([]string, error) {
+	if batchFile {
+		return readLines(input)
+	}
+	return filepath.Glob(input)
 }
 
 // readLines reads a whole file into memory
@@ -438,7 +448,7 @@ func help() {
 	consolePrint("\n\x1b[33;1mUsage:\x1b[0m\n")
 	consolePrint("    It uses the same syntax as FFmpeg:\n\n")
 	consolePrint("    fflite [fflite_option] [global_options] {[input_file_options] -i input_file} ... {[output_file_options] output_file} ...\n\n")
-	consolePrint("    For batch execution pass \".txt\" file as input.\n")
+	consolePrint("    For batch execution pass \".txt\" file or a glob pattern as input.\n")
 	consolePrint("    Preset arguments are replaced with specific strings.\n")
 	consolePrint("\n\x1b[33;1mOptions:\x1b[0m\n")
 	consolePrint("    ffmpeg       original ffmpeg text output\n")

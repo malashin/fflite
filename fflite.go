@@ -13,7 +13,7 @@ import (
 )
 
 // Global variables.
-var version = "v0.1.27"
+var version = "v0.1.28"
 var presets = map[string]string{
 	`^\@crf(\d+)$`:  "-an -vcodec libx264 -preset medium -crf ${1} -pix_fmt yuv420p -g 0 -map_metadata -1 -map_chapters -1",
 	`^\@ac(\d+)$`:   "-vn -acodec ac3 -ab ${1}k -map_metadata -1 -map_chapters -1",
@@ -48,7 +48,7 @@ func main() {
 	// Main variables.
 	var batchInputName, firstInput string
 	var errorsArray []string
-	var sigint, ffmpeg, nologs, crop bool
+	var sigint, ffmpeg, nologs, crop, isBatchInputFile bool
 	// Intercept interrupt signal
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
@@ -74,8 +74,17 @@ func main() {
 			if (args[i] == "-i") && (strings.HasSuffix(args[i+1], ".txt")) {
 				if batchInputName == "" {
 					batchInputName = args[i+1]
+					isBatchInputFile = true
 				} else {
-					consolePrint("\x1b[31;1mOnly one .txt file is allowed for batch execution.\x1b[0m\n")
+					consolePrint("\x1b[31;1mOnly one .txt file or glob pattern is allowed for batch execution.\x1b[0m\n")
+					os.Exit(1)
+				}
+			} else if (args[i] == "-i") && (strings.ContainsAny(args[i+1], "*?[")) {
+				if batchInputName == "" {
+					batchInputName = args[i+1]
+					isBatchInputFile = false
+				} else {
+					consolePrint("\x1b[31;1mOnly one .txt file or glob pattern is allowed for batch execution.\x1b[0m\n")
 					os.Exit(1)
 				}
 			}
@@ -83,65 +92,63 @@ func main() {
 				firstInput = args[i+1]
 				if crop {
 					cropDetect(firstInput)
-					os.Exit(1)
+					os.Exit(0)
 				}
 			}
 		}
 		ffCommand = append(ffCommand, argsPreset(args[i])...)
 	}
-	// If .txt file is passed as input start batch process.
-	// .txt input will be replaced with each line from that file.
+	// If .txt file or glob pattern is passed as input start batch process.
+	// Input will be replaced with each line from that file.
 	if batchInputName != "" {
 		// Get index of batch file.
 		batchInputIndex := stringIndexInSlice(ffCommand, batchInputName)
-		if batchInputIndex != -1 {
-			// Create array of files from batch file.
-			batchArray, err := readLines(batchInputName)
-			if err != nil {
-				consolePrint("\x1b[31;1m")
-				consolePrint(err)
-				consolePrint("\x1b[0m\n")
-				os.Exit(1)
-			}
-			batchArrayLength := len(batchArray)
-			if batchArrayLength < 1 {
-				consolePrint("\x1b[31;1mERROR: \"" + batchInputName + "\" is empty.\x1b[0m\n")
-				os.Exit(1)
-			}
-			// For each file.
-			for i, file := range batchArray {
-				if !sigint {
-					// Strip extension.
-					basename := file[0 : len(file)-len(filepath.Ext(file))]
-					batchCommand := make([]string, len(ffCommand), (cap(ffCommand)+1)*2)
-					copy(batchCommand, ffCommand)
-					// Append basename to each output file.
-					for i := 1; i < len(batchCommand); i++ {
-						if !(strings.HasPrefix(batchCommand[i], "-")) && (!(strings.HasPrefix(batchCommand[i-1], "-")) || batchCommand[i-1] == "-1") {
-							batchCommand[i] = basename + "_" + batchCommand[i]
-						}
+		batchArray, err := sliceFromFileOrGlob(batchInputName, isBatchInputFile)
+		if err != nil {
+			consolePrint("\x1b[31;1m", err, "\x1b[0m\n")
+			os.Exit(1)
+		}
+		batchArrayLength := len(batchArray)
+		if batchArrayLength < 1 {
+			consolePrint("\x1b[31;1mERROR: \"" + batchInputName + "\" is empty.\x1b[0m\n")
+			os.Exit(1)
+		}
+		if !isBatchInputFile {
+			consolePrint("\x1b[30;1mINPUT(", batchArrayLength, "): ", strings.Join(batchArray, ", "), "\x1b[0m\n")
+		}
+		// For each file.
+		for i, file := range batchArray {
+			if !sigint {
+				// Strip extension.
+				basename := file[0 : len(file)-len(filepath.Ext(file))]
+				batchCommand := make([]string, len(ffCommand), (cap(ffCommand)+1)*2)
+				copy(batchCommand, ffCommand)
+				// Append basename to each output file.
+				for i := 1; i < len(batchCommand); i++ {
+					if !(strings.HasPrefix(batchCommand[i], "-")) && (batchCommand[i] != "NUL") && (!(strings.HasPrefix(batchCommand[i-1], "-")) || batchCommand[i-1] == "-1") {
+						batchCommand[i] = basename + "_" + batchCommand[i]
 					}
-					// Replace batch input file with filename.
-					batchCommand[batchInputIndex] = file
-					consolePrint("\n\x1b[42;1mINPUT " + strconv.FormatInt(int64(i)+1, 10) + " of " + strconv.FormatInt(int64(batchArrayLength), 10) + "\x1b[0m\n")
-					errors := encodeFile(batchCommand, true, ffmpeg)
-					// Append errors to errorsArray.
-					if len(errors) > 0 {
-						if len(errorsArray) != 0 {
-							errorsArray = append(errorsArray, "\n")
-						}
-						errorsArray = append(errorsArray, "\x1b[42;1mINPUT "+strconv.FormatInt(int64(i)+1, 10)+":\x1b[0m\x1b[32;1m "+file+"\x1b[0m\n")
-						errorsArray = append(errorsArray, errors...)
-						if !nologs {
-							writeStringArrayToFile(file+".#err", []string{"INPUT: " + file + "\n"}, 0775)
-							writeStringArrayToFile(file+".#err", errors, 0775)
-						}
+				}
+				// Replace batch input file with filename.
+				batchCommand[batchInputIndex] = file
+				consolePrint("\n\x1b[42;1mINPUT " + strconv.FormatInt(int64(i)+1, 10) + " of " + strconv.FormatInt(int64(batchArrayLength), 10) + "\x1b[0m\n")
+				errors := encodeFile(batchCommand, true, ffmpeg)
+				// Append errors to errorsArray.
+				if len(errors) > 0 {
+					if len(errorsArray) != 0 {
+						errorsArray = append(errorsArray, "\n")
+					}
+					errorsArray = append(errorsArray, "\x1b[42;1mINPUT "+strconv.FormatInt(int64(i)+1, 10)+":\x1b[0m\x1b[32;1m "+file+"\x1b[0m\n")
+					errorsArray = append(errorsArray, errors...)
+					if !nologs {
+						writeStringArrayToFile(file+".#err", []string{"INPUT: " + file + "\n"}, 0775)
+						writeStringArrayToFile(file+".#err", errors, 0775)
 					}
 				}
 			}
-			// Play bell sound.
-			consolePrint("\x07")
 		}
+		// Play bell sound.
+		consolePrint("\x07")
 	} else {
 		errors := encodeFile(ffCommand, false, ffmpeg)
 		// Append errors to errorsArray.
