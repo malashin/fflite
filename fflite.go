@@ -34,7 +34,7 @@ var regexpMap = map[string]*regexp.Regexp{
 	"duration":              regexp.MustCompile(`.*(Duration.*)`),
 	"durationHHMMSSMS":      regexp.MustCompile(`.*Duration: (\d{2}\:\d{2}\:\d{2}\.\d{2}).*`),
 	"stream":                regexp.MustCompile(`.*Stream #(\d+\:\d+)(.*?):(.*)`),
-	"errors":                regexp.MustCompile(`(.*No such file.*|.*Invalid data.*|.*At least one output file must be specified.*|.*Unrecognized option.*|.*Option not found.*|.*matches no streams.*|.*not supported.*|.*Invalid argument.*|.*Error.*|.*not exist.*|.*-vf\/-af\/-filter.*|.*No such filter.*|.*does not contain.*|.*Not overwriting - exiting.*|.*denied.*|.*\[y\/N\].*|.*Trailing options were found on the commandline.*|.*unconnected output.*|.*Cannot create the link.*|.*Media type mismatch.*|.*moov atom not found.|.*Cannot find a matching stream.*|.*Unknown encoder.*|.*experimental codecs are not enabled.*|.*Alternatively use the non experimental encoder.*|.*Failed to configure.*|.*do not match the corresponding output.*|.*cannot be used together.*|.*Invalid out channel name.*)`),
+	"errors":                regexp.MustCompile(`(.*No such file.*|.*Invalid data.*|.*At least one output file must be specified.*|.*Unrecognized option.*|.*Option not found.*|.*matches no streams.*|.*not supported.*|.*Invalid argument.*|.*Error.*|.*not exist.*|.*-vf\/-af\/-filter.*|.*No such filter.*|.*does not contain.*|.*Not overwriting - exiting.*|.*denied.*|.*\[y\/N\].*|.*Trailing options were found on the commandline.*|.*unconnected output.*|.*Cannot create the link.*|.*Media type mismatch.*|.*moov atom not found.|.*Cannot find a matching stream.*|.*Unknown encoder.*|.*experimental codecs are not enabled.*|.*Alternatively use the non experimental encoder.*|.*Failed to configure.*|.*do not match the corresponding output.*|.*cannot be used together.*|.*Invalid out channel name.*|.*Protocol not found.*)`),
 	"warnings":              regexp.MustCompile(`(.*Warning:.*|.*Past duration.*too large.*|.*Starting second pass.*)`),
 	"encoding":              regexp.MustCompile(`.* (time=.*) bitrate=.*(?:\/s|N\/A)(?: |.*)(dup=.*speed=.*|speed=.*)`),
 	"encodingNoSpeed":       regexp.MustCompile(`.* (time=.*) bitrate=.*(\/s|N\/A)(.*)`),
@@ -42,6 +42,7 @@ var regexpMap = map[string]*regexp.Regexp{
 	"currentSecond":         regexp.MustCompile(`.*size=.* time=.*?(\d{2}\:\d{2}\:\d{2}\.\d{2}).*`),
 	"hide":                  regexp.MustCompile(`(.*Press \[q\] to stop.*|.*Last message repeated.*)`),
 	"crop":                  regexp.MustCompile(`.*cropdetect.*(crop=(\d+):(\d+):(\d+):(\d+)).*`),
+	"fileNameReplace":       regexp.MustCompile(`(.+)\:(.*)`),
 }
 
 func main() {
@@ -87,6 +88,10 @@ func main() {
 					consolePrint("\x1b[31;1mOnly one .txt file or glob pattern is allowed for batch execution.\x1b[0m\n")
 					os.Exit(1)
 				}
+			} else if (args[i] == "-i") && (firstInput != "") && (regexpMap["fileNameReplace"].MatchString(args[i+1])) {
+				// Replace filename if it contains "old:new" pattern.
+				match := regexpMap["fileNameReplace"].FindStringSubmatch(args[i+1])
+				args[i+1] = strings.Replace(firstInput, match[1], match[2], -1)
 			}
 			if (args[i] == "-i") && (firstInput == "") {
 				firstInput = args[i+1]
@@ -106,7 +111,11 @@ func main() {
 		}
 		batchArrayLength := len(batchArray)
 		if batchArrayLength < 1 {
-			consolePrint("\x1b[31;1mERROR: \"" + batchInputName + "\" is empty.\x1b[0m\n")
+			if isBatchInputFile {
+				consolePrint("\x1b[31;1mERROR: \"" + batchInputName + "\" is empty.\x1b[0m\n")
+			} else {
+				consolePrint("\x1b[31;1mERROR: No files matching \"" + batchInputName + "\" pattern.\x1b[0m\n")
+			}
 			os.Exit(1)
 		}
 		if !isBatchInputFile {
@@ -119,10 +128,16 @@ func main() {
 				basename := file[0 : len(file)-len(filepath.Ext(file))]
 				batchCommand := make([]string, len(ffCommand), (cap(ffCommand)+1)*2)
 				copy(batchCommand, ffCommand)
-				// Append basename to each output file.
+				// For each output filename.
 				for i := 1; i < len(batchCommand); i++ {
 					if !(strings.HasPrefix(batchCommand[i], "-")) && (batchCommand[i] != "NUL") && (!(strings.HasPrefix(batchCommand[i-1], "-")) || batchCommand[i-1] == "-1") {
-						batchCommand[i] = basename + "_" + batchCommand[i]
+						// Replace filename if it contains "old:new" pattern, append the output to input otherwise.
+						if regexpMap["fileNameReplace"].MatchString(batchCommand[i]) {
+							match := regexpMap["fileNameReplace"].FindStringSubmatch(batchCommand[i])
+							batchCommand[i] = strings.Replace(file, match[1], match[2], -1)
+						} else {
+							batchCommand[i] = basename + "_" + batchCommand[i]
+						}
 					}
 				}
 				// Replace batch input file with filename.
@@ -146,6 +161,14 @@ func main() {
 		// Play bell sound.
 		consolePrint("\x07")
 	} else {
+		// For each output filename.
+		for i := 1; i < len(ffCommand); i++ {
+			if !(strings.HasPrefix(ffCommand[i], "-")) && (ffCommand[i] != "NUL") && (!(strings.HasPrefix(ffCommand[i-1], "-")) || ffCommand[i-1] == "-1") && (regexpMap["fileNameReplace"].MatchString(ffCommand[i])) {
+				// Replace filename if it contains "old:new" pattern.
+				match := regexpMap["fileNameReplace"].FindStringSubmatch(ffCommand[i])
+				ffCommand[i] = strings.Replace(firstInput, match[1], match[2], -1)
+			}
+		}
 		errors := encodeFile(ffCommand, firstInput, false, ffmpeg, crop)
 		// Append errors to errorsArray.
 		if len(errors) > 0 {

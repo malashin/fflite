@@ -487,9 +487,7 @@ func cropDetect(firstInput string) {
 	cmd := exec.Command("ffmpeg", "-i", firstInput)
 	stdoutStderr, err := cmd.CombinedOutput()
 	if err != nil && fmt.Sprint(err) != "exit status 1" {
-		consolePrint("\x1b[31;1m")
-		consolePrint(err)
-		consolePrint("\x1b[0m\n")
+		consolePrint("\x1b[31;1m", err, "\x1b[0m\n")
 	}
 	output := string(regexpMap["durationHHMMSSMS"].Find(stdoutStderr))
 	duration := hhmmssmsToSeconds(regexpMap["durationHHMMSSMS"].ReplaceAllString(output, "${1}"))
@@ -531,7 +529,7 @@ type crop struct {
 	y int
 }
 
-// encodeFile starts ffmpeg command witch passed arguments in ffCommand []string array.
+// encodeFile starts ffmpeg command with passed arguments in ffCommand []string array.
 func encodeFile(ffCommand []string, firstInput string, batchMode bool, ffmpeg bool, crop bool) []string {
 	var printCommand, progress, lastLine, lastLineUsed, lastLineFull string
 	var errorsArray, warningArray []string
