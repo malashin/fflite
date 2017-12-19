@@ -410,17 +410,24 @@ func getUpstreamVersion() string {
 	return version
 }
 
-func parseOptions(args []string) (bool, bool, bool, []string) {
-	var ffmpeg, nologs, crop bool
-	switch args[0] {
+func parseOptions(input []string) (ffmpeg bool, nologs bool, crop bool, sync bool, args []string) {
+	switch input[0] {
 	// "ffmpeg" run the same command in ffmpeg instead of fflite.
 	case "ffmpeg":
 		ffmpeg = true
-		args = args[1:]
+		args = input[1:]
 	// "nologs" don't save error log files.
 	case "nologs":
 		nologs = true
-		args = args[1:]
+		args = input[1:]
+	// "crop" runs cropDetect on input file.
+	case "crop":
+		crop = true
+		args = input[1:]
+	// "sync" speeds up or slows down audio file for it's duration to match video files duration.
+	case "sync":
+		sync = true
+		args = input[1:]
 	// "update" check upstream version.
 	case "version":
 		upstreamVersion := getUpstreamVersion()
@@ -435,10 +442,8 @@ func parseOptions(args []string) (bool, bool, bool, []string) {
 			consolePrint("\x1b[32;1mYour fflite is up to date.\x1b[0m\n")
 		}
 		os.Exit(0)
-	case "crop":
-		crop = true
 	}
-	return ffmpeg, nologs, crop, args
+	return
 }
 
 // help returns usage information and programm version.
@@ -498,9 +503,7 @@ func cropDetect(firstInput string) {
 		cmd := exec.Command("ffmpeg", "-ss", strconv.FormatFloat(tempDur, 'f', -1, 64), "-i", firstInput, "-vf", "cropdetect="+cropDetectParams, "-t", cropDetectDur, "-an", "-f", "null", "nul")
 		stdoutStderr, err := cmd.CombinedOutput()
 		if err != nil {
-			consolePrint("\x1b[31;1m")
-			consolePrint(err)
-			consolePrint("\x1b[0m\n")
+			consolePrint("\x1b[31;1m", err, "\x1b[0m\n")
 		}
 		cropLines := regexpMap["crop"].FindAll(stdoutStderr, -1)
 		for _, v := range cropLines {
@@ -529,8 +532,46 @@ type crop struct {
 	y int
 }
 
+func audioSync(args []string) {
+	var input1, input2 string
+	// Find two inputs.
+	for i := 0; i < len(args); i++ {
+		if i+1 < len(args) {
+			if (args[i] == "-i") && (input1 == "") {
+				input1 = args[i+1]
+				continue
+			}
+			if (args[i] == "-i") && (input1 != "") && (input2 == "") {
+				input2 = args[i+1]
+				continue
+			}
+		}
+	}
+	if input2 == "" {
+		consolePrint("\x1b[31;1mERROR: sync mode requires two input files.\x1b[0m\n")
+		return
+	}
+
+	cmd := exec.Command("ffmpeg", "-i", input1, "-i", input2)
+	stdoutStderr, err := cmd.CombinedOutput()
+	if err != nil && fmt.Sprint(err) != "exit status 1" {
+		consolePrint("\x1b[31;1m", err, "\x1b[0m\n")
+	}
+	durations := regexpMap["durationHHMMSSMS"].FindAll(stdoutStderr, -1)
+	duration1 := hhmmssmsToSeconds(regexpMap["durationHHMMSSMS"].ReplaceAllString(string(durations[0]), "${1}"))
+	duration2 := hhmmssmsToSeconds(regexpMap["durationHHMMSSMS"].ReplaceAllString(string(durations[1]), "${1}"))
+	consolePrint("sync durations: ", duration1, duration2, "\n")
+	rate := round(48000 * duration2 / duration1)
+	if rate == 48000 {
+		consolePrint("AudioSync is not needed.\n")
+		return
+	}
+	consolePrint(rate)
+	// cmd := exec.Command("ffmpeg", "-i", input2, "-af", "asetrate="+rate+",aresample=48000", input2)
+}
+
 // encodeFile starts ffmpeg command with passed arguments in ffCommand []string array.
-func encodeFile(ffCommand []string, firstInput string, batchMode bool, ffmpeg bool, crop bool) []string {
+func encodeFile(ffCommand []string, batchMode bool, ffmpeg bool) []string {
 	var printCommand, progress, lastLine, lastLineUsed, lastLineFull string
 	var errorsArray, warningArray []string
 	var duration, prevSecond float64
@@ -560,12 +601,6 @@ func encodeFile(ffCommand []string, firstInput string, batchMode bool, ffmpeg bo
 	}
 	printCommand += "\x1b[0m\n"
 	consolePrint(printCommand)
-
-	// Run cropDetect if crop mode is enabled.
-	if crop {
-		cropDetect(firstInput)
-		return errorsArray
-	}
 
 	// Create exec command to start ffmpeg with.
 	cmd := exec.Command("ffmpeg", ffCommand...)

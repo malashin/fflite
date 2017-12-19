@@ -49,7 +49,7 @@ func main() {
 	// Main variables.
 	var batchInputName, firstInput string
 	var errorsArray []string
-	var sigint, ffmpeg, nologs, crop, isBatchInputFile bool
+	var sigint, ffmpeg, nologs, crop, sync, isBatchInputFile bool
 	// Intercept interrupt signal
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
@@ -65,11 +65,10 @@ func main() {
 		help()
 		os.Exit(0)
 	}
-	ffmpeg, nologs, crop, args = parseOptions(args)
+	ffmpeg, nologs, crop, sync, args = parseOptions(args)
 	// Create slice containing arguments of ffmpeg command.
 	ffCommand := []string{}
 	// Parse all arguments and apply presets if needed.
-	// Arguments surrounded by escaped doublequotes are joined.
 	for i := 0; i < len(args); i++ {
 		if i+1 < len(args) {
 			if (args[i] == "-i") && (strings.HasSuffix(args[i+1], ".txt")) {
@@ -143,7 +142,17 @@ func main() {
 				// Replace batch input file with filename.
 				batchCommand[batchInputIndex] = file
 				consolePrint("\n\x1b[42;1mINPUT " + strconv.FormatInt(int64(i)+1, 10) + " of " + strconv.FormatInt(int64(batchArrayLength), 10) + "\x1b[0m\n")
-				errors := encodeFile(batchCommand, file, true, ffmpeg, crop)
+				// Run cropDetect if crop mode is enabled.
+				if crop {
+					cropDetect(firstInput)
+					continue
+				}
+				// Run audioSync if sync mode is enabled.
+				if sync {
+					audioSync(batchCommand)
+					continue
+				}
+				errors := encodeFile(batchCommand, true, ffmpeg)
 				// Append errors to errorsArray.
 				if len(errors) > 0 {
 					if len(errorsArray) != 0 {
@@ -169,7 +178,17 @@ func main() {
 				ffCommand[i] = strings.Replace(firstInput, match[1], match[2], -1)
 			}
 		}
-		errors := encodeFile(ffCommand, firstInput, false, ffmpeg, crop)
+		// Run cropDetect if crop mode is enabled.
+		if crop {
+			cropDetect(firstInput)
+			return
+		}
+		// Run audioSync if sync mode is enabled.
+		if sync {
+			audioSync(ffCommand)
+			return
+		}
+		errors := encodeFile(ffCommand, false, ffmpeg)
 		// Append errors to errorsArray.
 		if len(errors) > 0 {
 			errorsArray = append(errorsArray, "\x1b[42;1mINPUT:\x1b[0m\x1b[32;1m "+firstInput+"\x1b[0m\n")
