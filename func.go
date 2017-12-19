@@ -532,7 +532,7 @@ type crop struct {
 }
 
 // encodeFile starts ffmpeg command witch passed arguments in ffCommand []string array.
-func encodeFile(ffCommand []string, batchMode bool, ffmpeg bool) []string {
+func encodeFile(ffCommand []string, firstInput string, batchMode bool, ffmpeg bool, crop bool) []string {
 	var printCommand, progress, lastLine, lastLineUsed, lastLineFull string
 	var errorsArray, warningArray []string
 	var duration, prevSecond float64
@@ -562,6 +562,13 @@ func encodeFile(ffCommand []string, batchMode bool, ffmpeg bool) []string {
 	}
 	printCommand += "\x1b[0m\n"
 	consolePrint(printCommand)
+
+	// Run cropDetect if crop mode is enabled.
+	if crop {
+		cropDetect(firstInput)
+		return errorsArray
+	}
+
 	// Create exec command to start ffmpeg with.
 	cmd := exec.Command("ffmpeg", ffCommand...)
 	// Pipe stderr (default ffmpeg info channel) to terminal.

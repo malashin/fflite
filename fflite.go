@@ -13,7 +13,7 @@ import (
 )
 
 // Global variables.
-var version = "v0.1.28"
+var version = "v0.1.29"
 var presets = map[string]string{
 	`^\@crf(\d+)$`:  "-an -vcodec libx264 -preset medium -crf ${1} -pix_fmt yuv420p -g 0 -map_metadata -1 -map_chapters -1",
 	`^\@ac(\d+)$`:   "-vn -acodec ac3 -ab ${1}k -map_metadata -1 -map_chapters -1",
@@ -90,10 +90,6 @@ func main() {
 			}
 			if (args[i] == "-i") && (firstInput == "") {
 				firstInput = args[i+1]
-				if crop {
-					cropDetect(firstInput)
-					os.Exit(0)
-				}
 			}
 		}
 		ffCommand = append(ffCommand, argsPreset(args[i])...)
@@ -132,7 +128,7 @@ func main() {
 				// Replace batch input file with filename.
 				batchCommand[batchInputIndex] = file
 				consolePrint("\n\x1b[42;1mINPUT " + strconv.FormatInt(int64(i)+1, 10) + " of " + strconv.FormatInt(int64(batchArrayLength), 10) + "\x1b[0m\n")
-				errors := encodeFile(batchCommand, true, ffmpeg)
+				errors := encodeFile(batchCommand, file, true, ffmpeg, crop)
 				// Append errors to errorsArray.
 				if len(errors) > 0 {
 					if len(errorsArray) != 0 {
@@ -150,7 +146,7 @@ func main() {
 		// Play bell sound.
 		consolePrint("\x07")
 	} else {
-		errors := encodeFile(ffCommand, false, ffmpeg)
+		errors := encodeFile(ffCommand, firstInput, false, ffmpeg, crop)
 		// Append errors to errorsArray.
 		if len(errors) > 0 {
 			errorsArray = append(errorsArray, "\x1b[42;1mINPUT:\x1b[0m\x1b[32;1m "+firstInput+"\x1b[0m\n")
