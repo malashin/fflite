@@ -442,6 +442,8 @@ func parseOptions(input []string) (ffmpeg bool, nologs bool, crop bool, sync boo
 			consolePrint("\x1b[32;1mYour fflite is up to date.\x1b[0m\n")
 		}
 		os.Exit(0)
+	default:
+		args = input
 	}
 	return
 }
@@ -459,6 +461,8 @@ func help() {
 	consolePrint("    ffmpeg       original ffmpeg text output\n")
 	consolePrint("    version      check for updates\n")
 	consolePrint("    nologs       do not create \".err\" error log files\n")
+	consolePrint("    crop         audomated cropDetect module \"fflite crop -i input_file\"\n")
+	consolePrint("    sync         sync 2nd input audio files duration to the duration on the first input \"fflite sync -i input_file -i input_file\"\n")
 	consolePrint("\n\x1b[33;1mPresets:\x1b[0m\n")
 	// Find maximum length of preset keys.
 	length := 0
@@ -532,8 +536,8 @@ type crop struct {
 	y int
 }
 
-func audioSync(args []string) {
-	var input1, input2 string
+func audioSync(args []string, batchMode bool) (errors []string, input2 string) {
+	var input1 string
 	// Find two inputs.
 	for i := 0; i < len(args); i++ {
 		if i+1 < len(args) {
@@ -551,29 +555,50 @@ func audioSync(args []string) {
 		consolePrint("\x1b[31;1mERROR: sync mode requires two input files.\x1b[0m\n")
 		return
 	}
-
 	cmd := exec.Command("ffmpeg", "-i", input1, "-i", input2)
 	stdoutStderr, err := cmd.CombinedOutput()
 	if err != nil && fmt.Sprint(err) != "exit status 1" {
 		consolePrint("\x1b[31;1m", err, "\x1b[0m\n")
-	}
-	durations := regexpMap["durationHHMMSSMS"].FindAll(stdoutStderr, -1)
-	duration1 := hhmmssmsToSeconds(regexpMap["durationHHMMSSMS"].ReplaceAllString(string(durations[0]), "${1}"))
-	duration2 := hhmmssmsToSeconds(regexpMap["durationHHMMSSMS"].ReplaceAllString(string(durations[1]), "${1}"))
-	consolePrint("sync durations: ", duration1, duration2, "\n")
-	rate := round(48000 * duration2 / duration1)
-	if rate == 48000 {
-		consolePrint("AudioSync is not needed.\n")
 		return
 	}
-	consolePrint(rate)
-	// cmd := exec.Command("ffmpeg", "-i", input2, "-af", "asetrate="+rate+",aresample=48000", input2)
+	durations := regexpMap["durationHHMMSSMS"].FindAll(stdoutStderr, -1)
+	if len(durations) < 2 {
+		consolePrint("\x1b[31;1mERROR: cannot determine durations for input files.\x1b[0m\n")
+		return
+	}
+	duration1String := regexpMap["durationHHMMSSMS"].ReplaceAllString(string(durations[0]), "${1}")
+	duration2String := regexpMap["durationHHMMSSMS"].ReplaceAllString(string(durations[1]), "${1}")
+	duration1 := hhmmssmsToSeconds(duration1String)
+	duration2 := hhmmssmsToSeconds(duration2String)
+	rate := round(48000 * duration2 / duration1)
+	if rate == 48000 {
+		consolePrint("\x1b[32m" + input1 + "\x1b[0m Duration: " + duration1String + "\n")
+		consolePrint("\x1b[32m" + input2 + "\x1b[0m Duration: " + duration2String + "\n")
+		consolePrint("\x1b[32;1mAudioSync is not needed.\x1b[0m\n")
+		return
+	}
+	basename := input2[0 : len(input2)-len(filepath.Ext(input2))]
+	errors, _ = encodeFile([]string{"-i",
+		input2,
+		"-af",
+		"asetrate=" + strconv.FormatInt(rate, 10) + ",aresample=48000",
+		"-vn",
+		"-acodec",
+		"flac",
+		"-compression_level",
+		"0",
+		"-map_metadata",
+		"-1",
+		"-map_chapters",
+		"-1",
+		basename + "_SYNC.flac"}, batchMode, false)
+	return
 }
 
 // encodeFile starts ffmpeg command with passed arguments in ffCommand []string array.
-func encodeFile(ffCommand []string, batchMode bool, ffmpeg bool) []string {
+func encodeFile(ffCommand []string, batchMode bool, ffmpeg bool) (errorsArray []string, firstInput string) {
 	var printCommand, progress, lastLine, lastLineUsed, lastLineFull string
-	var errorsArray, warningArray []string
+	var warningArray []string
 	var duration, prevSecond float64
 	var speedArray []float64
 	var encodingStarted, encodingFinished, streamMapping, sigint bool
@@ -601,6 +626,15 @@ func encodeFile(ffCommand []string, batchMode bool, ffmpeg bool) []string {
 	}
 	printCommand += "\x1b[0m\n"
 	consolePrint(printCommand)
+
+	// Find the first input.
+	for i := 0; i < len(ffCommand); i++ {
+		if i+1 < len(ffCommand) {
+			if (ffCommand[i] == "-i") && (firstInput == "") {
+				firstInput = ffCommand[i+1]
+			}
+		}
+	}
 
 	// Create exec command to start ffmpeg with.
 	cmd := exec.Command("ffmpeg", ffCommand...)
@@ -678,5 +712,5 @@ func encodeFile(ffCommand []string, batchMode bool, ffmpeg bool) []string {
 		consolePrint("\x07")
 	}
 
-	return errorsArray
+	return
 }

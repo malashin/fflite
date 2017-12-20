@@ -13,7 +13,7 @@ import (
 )
 
 // Global variables.
-var version = "v0.1.29"
+var version = "v0.1.30"
 var presets = map[string]string{
 	`^\@crf(\d+)$`:  "-an -vcodec libx264 -preset medium -crf ${1} -pix_fmt yuv420p -g 0 -map_metadata -1 -map_chapters -1",
 	`^\@ac(\d+)$`:   "-vn -acodec ac3 -ab ${1}k -map_metadata -1 -map_chapters -1",
@@ -48,7 +48,7 @@ var regexpMap = map[string]*regexp.Regexp{
 func main() {
 	// Main variables.
 	var batchInputName, firstInput string
-	var errorsArray []string
+	var errors, errorsArray []string
 	var sigint, ffmpeg, nologs, crop, sync, isBatchInputFile bool
 	// Intercept interrupt signal
 	c := make(chan os.Signal, 1)
@@ -87,11 +87,12 @@ func main() {
 					consolePrint("\x1b[31;1mOnly one .txt file or glob pattern is allowed for batch execution.\x1b[0m\n")
 					os.Exit(1)
 				}
-			} else if (args[i] == "-i") && (firstInput != "") && (regexpMap["fileNameReplace"].MatchString(args[i+1])) {
-				// Replace filename if it contains "old:new" pattern.
-				match := regexpMap["fileNameReplace"].FindStringSubmatch(args[i+1])
-				args[i+1] = strings.Replace(firstInput, match[1], match[2], -1)
 			}
+			// } else if (args[i] == "-i") && (firstInput != "") && (regexpMap["fileNameReplace"].MatchString(args[i+1])) {
+			// 	// Replace filename if it contains "old:new" pattern.
+			// 	match := regexpMap["fileNameReplace"].FindStringSubmatch(args[i+1])
+			// 	args[i+1] = strings.Replace(firstInput, match[1], match[2], -1)
+			// }
 			if (args[i] == "-i") && (firstInput == "") {
 				firstInput = args[i+1]
 			}
@@ -122,13 +123,29 @@ func main() {
 		}
 		// For each file.
 		for i, file := range batchArray {
+			filename := ""
+			firstInput = ""
 			if !sigint {
 				// Strip extension.
 				basename := file[0 : len(file)-len(filepath.Ext(file))]
 				batchCommand := make([]string, len(ffCommand), (cap(ffCommand)+1)*2)
 				copy(batchCommand, ffCommand)
-				// For each output filename.
-				for i := 1; i < len(batchCommand); i++ {
+				// Replace batch input file with filename.
+				batchCommand[batchInputIndex] = file
+				// Iterate over all arguments.
+				for i := 0; i < len(batchCommand); i++ {
+					if i+1 < len(batchCommand) {
+						// For each input filename except the first one.
+						if (batchCommand[i] == "-i") && (firstInput != "") && (regexpMap["fileNameReplace"].MatchString(batchCommand[i+1])) {
+							// Replace filename if it contains "old:new" pattern.
+							match := regexpMap["fileNameReplace"].FindStringSubmatch(batchCommand[i+1])
+							batchCommand[i+1] = strings.Replace(firstInput, match[1], match[2], -1)
+						}
+						if (batchCommand[i] == "-i") && (firstInput == "") {
+							firstInput = batchCommand[i+1]
+						}
+					}
+					// For each output filename.
 					if !(strings.HasPrefix(batchCommand[i], "-")) && (batchCommand[i] != "NUL") && (!(strings.HasPrefix(batchCommand[i-1], "-")) || batchCommand[i-1] == "-1") {
 						// Replace filename if it contains "old:new" pattern, append the output to input otherwise.
 						if regexpMap["fileNameReplace"].MatchString(batchCommand[i]) {
@@ -139,29 +156,27 @@ func main() {
 						}
 					}
 				}
-				// Replace batch input file with filename.
-				batchCommand[batchInputIndex] = file
 				consolePrint("\n\x1b[42;1mINPUT " + strconv.FormatInt(int64(i)+1, 10) + " of " + strconv.FormatInt(int64(batchArrayLength), 10) + "\x1b[0m\n")
+				switch {
 				// Run cropDetect if crop mode is enabled.
-				if crop {
+				case crop:
 					cropDetect(firstInput)
 					continue
-				}
 				// Run audioSync if sync mode is enabled.
-				if sync {
-					audioSync(batchCommand)
-					continue
+				case sync:
+					errors, filename = audioSync(batchCommand, true)
+				default:
+					errors, filename = encodeFile(batchCommand, true, ffmpeg)
 				}
-				errors := encodeFile(batchCommand, true, ffmpeg)
 				// Append errors to errorsArray.
 				if len(errors) > 0 {
 					if len(errorsArray) != 0 {
 						errorsArray = append(errorsArray, "\n")
 					}
-					errorsArray = append(errorsArray, "\x1b[42;1mINPUT "+strconv.FormatInt(int64(i)+1, 10)+":\x1b[0m\x1b[32;1m "+file+"\x1b[0m\n")
+					errorsArray = append(errorsArray, "\x1b[42;1mINPUT "+strconv.FormatInt(int64(i)+1, 10)+":\x1b[0m\x1b[32;1m "+filename+"\x1b[0m\n")
 					errorsArray = append(errorsArray, errors...)
 					if !nologs {
-						writeStringArrayToFile(file+".#err", []string{"INPUT: " + file + "\n"}, 0775)
+						writeStringArrayToFile(file+".#err", []string{"INPUT: " + filename + "\n"}, 0775)
 						writeStringArrayToFile(file+".#err", errors, 0775)
 					}
 				}
@@ -170,28 +185,41 @@ func main() {
 		// Play bell sound.
 		consolePrint("\x07")
 	} else {
+		filename := ""
+		firstInput = ""
 		// For each output filename.
-		for i := 1; i < len(ffCommand); i++ {
+		for i := 0; i < len(ffCommand); i++ {
+			if i+1 < len(ffCommand) {
+				// For each input filename except the first one.
+				if (ffCommand[i] == "-i") && (firstInput != "") && (regexpMap["fileNameReplace"].MatchString(ffCommand[i+1])) {
+					// Replace filename if it contains "old:new" pattern.
+					match := regexpMap["fileNameReplace"].FindStringSubmatch(ffCommand[i+1])
+					ffCommand[i+1] = strings.Replace(firstInput, match[1], match[2], -1)
+				}
+				if (ffCommand[i] == "-i") && (firstInput == "") {
+					firstInput = ffCommand[i+1]
+				}
+			}
 			if !(strings.HasPrefix(ffCommand[i], "-")) && (ffCommand[i] != "NUL") && (!(strings.HasPrefix(ffCommand[i-1], "-")) || ffCommand[i-1] == "-1") && (regexpMap["fileNameReplace"].MatchString(ffCommand[i])) {
 				// Replace filename if it contains "old:new" pattern.
 				match := regexpMap["fileNameReplace"].FindStringSubmatch(ffCommand[i])
 				ffCommand[i] = strings.Replace(firstInput, match[1], match[2], -1)
 			}
 		}
+		switch {
 		// Run cropDetect if crop mode is enabled.
-		if crop {
+		case crop:
 			cropDetect(firstInput)
 			return
-		}
 		// Run audioSync if sync mode is enabled.
-		if sync {
-			audioSync(ffCommand)
-			return
+		case sync:
+			errors, filename = audioSync(ffCommand, false)
+		default:
+			errors, filename = encodeFile(ffCommand, false, ffmpeg)
 		}
-		errors := encodeFile(ffCommand, false, ffmpeg)
 		// Append errors to errorsArray.
 		if len(errors) > 0 {
-			errorsArray = append(errorsArray, "\x1b[42;1mINPUT:\x1b[0m\x1b[32;1m "+firstInput+"\x1b[0m\n")
+			errorsArray = append(errorsArray, "\x1b[42;1mINPUT:\x1b[0m\x1b[32;1m "+filename+"\x1b[0m\n")
 			errorsArray = append(errorsArray, errors...)
 			if !nologs {
 				writeStringArrayToFile(firstInput+".#err", errorsArray, 0775)
