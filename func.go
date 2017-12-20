@@ -504,7 +504,18 @@ func cropDetect(firstInput string) {
 	for i := 1; i <= cropDetectCount; i++ {
 		var cropArrayLocal []crop
 		tempDur := duration * float64(i) / (float64(cropDetectCount) + 1.0)
-		cmd := exec.Command("ffmpeg", "-ss", strconv.FormatFloat(tempDur, 'f', -1, 64), "-i", firstInput, "-vf", "cropdetect="+cropDetectParams, "-t", cropDetectDur, "-an", "-f", "null", "nul")
+		ffCommand := []string{"-ss", strconv.FormatFloat(tempDur, 'f', -1, 64), "-i", firstInput, "-vf", "cropdetect=" + cropDetectParams, "-t", cropDetectDur, "-an", "-f", "null", "nul"}
+		// Print out the final ffmpeg command and add quotes to arguments that contain spaces.
+		printCommand := "\x1b[36;1m> \x1b[30;1m" + "ffmpeg"
+		for _, v := range ffCommand {
+			if strings.Contains(v, " ") {
+				v = "\"" + v + "\""
+			}
+			printCommand += " " + v
+		}
+		printCommand += "\x1b[0m\n"
+		consolePrint(printCommand)
+		cmd := exec.Command("ffmpeg", ffCommand...)
 		stdoutStderr, err := cmd.CombinedOutput()
 		if err != nil {
 			consolePrint("\x1b[31;1m", err, "\x1b[0m\n")
