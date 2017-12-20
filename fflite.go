@@ -42,7 +42,7 @@ var regexpMap = map[string]*regexp.Regexp{
 	"currentSecond":         regexp.MustCompile(`.*size=.* time=.*?(\d{2}\:\d{2}\:\d{2}\.\d{2}).*`),
 	"hide":                  regexp.MustCompile(`(.*Press \[q\] to stop.*|.*Last message repeated.*)`),
 	"crop":                  regexp.MustCompile(`.*cropdetect.*(crop=(\d+):(\d+):(\d+):(\d+)).*`),
-	"fileNameReplace":       regexp.MustCompile(`(.+)\:(.*)`),
+	"fileNameReplace":       regexp.MustCompile(`(.+)\:\:(.*)`),
 }
 
 func main() {
@@ -88,11 +88,6 @@ func main() {
 					os.Exit(1)
 				}
 			}
-			// } else if (args[i] == "-i") && (firstInput != "") && (regexpMap["fileNameReplace"].MatchString(args[i+1])) {
-			// 	// Replace filename if it contains "old:new" pattern.
-			// 	match := regexpMap["fileNameReplace"].FindStringSubmatch(args[i+1])
-			// 	args[i+1] = strings.Replace(firstInput, match[1], match[2], -1)
-			// }
 			if (args[i] == "-i") && (firstInput == "") {
 				firstInput = args[i+1]
 			}
@@ -137,7 +132,7 @@ func main() {
 					if i+1 < len(batchCommand) {
 						// For each input filename except the first one.
 						if (batchCommand[i] == "-i") && (firstInput != "") && (regexpMap["fileNameReplace"].MatchString(batchCommand[i+1])) {
-							// Replace filename if it contains "old:new" pattern.
+							// Replace filename if it contains "old::new" pattern.
 							match := regexpMap["fileNameReplace"].FindStringSubmatch(batchCommand[i+1])
 							batchCommand[i+1] = strings.Replace(firstInput, match[1], match[2], -1)
 						}
@@ -147,7 +142,7 @@ func main() {
 					}
 					// For each output filename.
 					if !(strings.HasPrefix(batchCommand[i], "-")) && (batchCommand[i] != "NUL") && (!(strings.HasPrefix(batchCommand[i-1], "-")) || batchCommand[i-1] == "-1") {
-						// Replace filename if it contains "old:new" pattern, append the output to input otherwise.
+						// Replace filename if it contains "old::new" pattern, append the output to input otherwise.
 						if regexpMap["fileNameReplace"].MatchString(batchCommand[i]) {
 							match := regexpMap["fileNameReplace"].FindStringSubmatch(batchCommand[i])
 							batchCommand[i] = strings.Replace(file, match[1], match[2], -1)
@@ -192,7 +187,7 @@ func main() {
 			if i+1 < len(ffCommand) {
 				// For each input filename except the first one.
 				if (ffCommand[i] == "-i") && (firstInput != "") && (regexpMap["fileNameReplace"].MatchString(ffCommand[i+1])) {
-					// Replace filename if it contains "old:new" pattern.
+					// Replace filename if it contains "old::new" pattern.
 					match := regexpMap["fileNameReplace"].FindStringSubmatch(ffCommand[i+1])
 					ffCommand[i+1] = strings.Replace(firstInput, match[1], match[2], -1)
 				}
@@ -200,10 +195,12 @@ func main() {
 					firstInput = ffCommand[i+1]
 				}
 			}
-			if !(strings.HasPrefix(ffCommand[i], "-")) && (ffCommand[i] != "NUL") && (!(strings.HasPrefix(ffCommand[i-1], "-")) || ffCommand[i-1] == "-1") && (regexpMap["fileNameReplace"].MatchString(ffCommand[i])) {
-				// Replace filename if it contains "old:new" pattern.
-				match := regexpMap["fileNameReplace"].FindStringSubmatch(ffCommand[i])
-				ffCommand[i] = strings.Replace(firstInput, match[1], match[2], -1)
+			if i > 0 {
+				if !(strings.HasPrefix(ffCommand[i], "-")) && (ffCommand[i] != "NUL") && (!(strings.HasPrefix(ffCommand[i-1], "-")) || ffCommand[i-1] == "-1") && (regexpMap["fileNameReplace"].MatchString(ffCommand[i])) {
+					// Replace filename if it contains "old::new" pattern.
+					match := regexpMap["fileNameReplace"].FindStringSubmatch(ffCommand[i])
+					ffCommand[i] = strings.Replace(firstInput, match[1], match[2], -1)
+				}
 			}
 		}
 		switch {
