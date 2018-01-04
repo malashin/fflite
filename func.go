@@ -410,26 +410,60 @@ func getUpstreamVersion() string {
 	return version
 }
 
-func parseOptions(input []string) (ffmpeg bool, nologs bool, crop bool, sync bool, args []string) {
-	switch input[0] {
+func parseOptions(input []string) (ffmpeg bool, nologs bool, crop bool, cropDetectNumber int, cropDetectLimit float64, sync bool, args []string) {
+	switch {
 	// "ffmpeg" run the same command in ffmpeg instead of fflite.
-	case "ffmpeg":
+	case input[0] == "ffmpeg":
 		ffmpeg = true
 		args = input[1:]
 	// "nologs" don't save error log files.
-	case "nologs":
+	case input[0] == "nologs":
 		nologs = true
 		args = input[1:]
 	// "crop" runs cropDetect on input file.
-	case "crop":
+	case regexpMap["cropMode"].MatchString(input[0]):
 		crop = true
 		args = input[1:]
+		cropDetectNumber = 5      // default values
+		cropDetectLimit = 0.10625 // default values
+		cropModeValues := regexpMap["cropMode"].FindStringSubmatch(input[0])
+		// If crop argument was passed with crop values.
+		if cropModeValues[1] != "" {
+			values := strings.Split(cropModeValues[1], ":")
+			// If there is no ":" in the crop values.
+			if len(values) == 1 {
+				v, err := strconv.ParseFloat(values[0], 64)
+				if err != nil {
+					consolePrint("\x1b[31;1m", err, "\x1b[0m\n")
+					return
+				}
+				// If crop value is less then 1 use it as cropDetect limit, cropDetect number otherwise.
+				if v < 1 {
+					cropDetectLimit = v
+				} else {
+					cropDetectNumber = int(round(v))
+				}
+			} else {
+				// Parse crop values if they are separated with ":".
+				i, err := strconv.ParseInt(values[0], 10, 64)
+				cropDetectNumber = int(i)
+				if err != nil {
+					consolePrint("\x1b[31;1m", err, "\x1b[0m\n")
+					return
+				}
+				cropDetectLimit, err = strconv.ParseFloat(values[1], 64)
+				if err != nil {
+					consolePrint("\x1b[31;1m", err, "\x1b[0m\n")
+					return
+				}
+			}
+		}
 	// "sync" speeds up or slows down audio file for it's duration to match video files duration.
-	case "sync":
+	case input[0] == "sync":
 		sync = true
 		args = input[1:]
 	// "update" check upstream version.
-	case "version":
+	case input[0] == "version":
 		upstreamVersion := getUpstreamVersion()
 		if version != upstreamVersion {
 			consolePrint("fflite version is \x1b[31;1m" + version + "\x1b[0m.\n")
@@ -461,7 +495,7 @@ func help() {
 	consolePrint("    ffmpeg       original ffmpeg text output\n")
 	consolePrint("    version      check for updates\n")
 	consolePrint("    nologs       do not create \".err\" error log files\n")
-	consolePrint("    crop         audomated cropDetect module \"fflite crop -i input_file\"\n")
+	consolePrint("    crop         audomated cropDetect module \"fflite crop[crop_number:crop_limit] -i input_file\"\n")
 	consolePrint("    sync         sync 2nd input audio files duration to the duration on the first input \"fflite sync -i input_file -i input_file\"\n")
 	consolePrint("\n\x1b[33;1mPresets:\x1b[0m\n")
 	// Find maximum length of preset keys.
@@ -488,11 +522,9 @@ func help() {
 }
 
 // cropDetect parses the input file for the necessary cropping parameters.
-func cropDetect(firstInput string) {
-	cropDetectCount := 5
+func cropDetect(firstInput string, cropDetectCount int, cropDetectLimit float64) {
 	cropDetectDur := "2" // One second in ffmpeg format
-	cropDetectParams := "0.12:2:0"
-
+	cropDetectParams := strconv.FormatFloat(cropDetectLimit, 'f', -1, 64) + ":2:0"
 	cmd := exec.Command("ffmpeg", "-i", firstInput)
 	stdoutStderr, err := cmd.CombinedOutput()
 	if err != nil && fmt.Sprint(err) != "exit status 1" {
@@ -500,21 +532,22 @@ func cropDetect(firstInput string) {
 	}
 	output := string(regexpMap["durationHHMMSSMS"].Find(stdoutStderr))
 	duration := hhmmssmsToSeconds(regexpMap["durationHHMMSSMS"].ReplaceAllString(output, "${1}"))
-	// var cropArrayGlobal []crop
+	consolePrint("\x1b[30;1m", "Running cropDetect ", cropDetectCount, " times, with the following parameters ", cropDetectParams, "\x1b[0m\n")
 	for i := 1; i <= cropDetectCount; i++ {
 		var cropArrayLocal []crop
 		tempDur := duration * float64(i) / (float64(cropDetectCount) + 1.0)
-		ffCommand := []string{"-ss", strconv.FormatFloat(tempDur, 'f', -1, 64), "-i", firstInput, "-vf", "cropdetect=" + cropDetectParams, "-t", cropDetectDur, "-an", "-f", "null", "nul"}
-		// Print out the final ffmpeg command and add quotes to arguments that contain spaces.
-		printCommand := "\x1b[36;1m> \x1b[30;1m" + "ffmpeg"
-		for _, v := range ffCommand {
-			if strings.Contains(v, " ") {
-				v = "\"" + v + "\""
-			}
-			printCommand += " " + v
-		}
-		printCommand += "\x1b[0m\n"
-		consolePrint(printCommand)
+		ffCommand := []string{"-ss",
+			strconv.FormatFloat(tempDur, 'f', -1, 64),
+			"-i",
+			firstInput,
+			"-vf",
+			"cropdetect=" + cropDetectParams,
+			"-t",
+			cropDetectDur,
+			"-an",
+			"-f",
+			"null",
+			"nul"}
 		cmd := exec.Command("ffmpeg", ffCommand...)
 		stdoutStderr, err := cmd.CombinedOutput()
 		if err != nil {
@@ -529,14 +562,17 @@ func cropDetect(firstInput string) {
 			crop := crop{w, h, x, y}
 			cropArrayLocal = append(cropArrayLocal, crop)
 		}
-		// for _, v := range cropArrayLocal {
-		// 	xl := v.x
-		// 	xr :=
-		// 	yt := v.y
-		// 	yb :=
-		// }
-		consolePrint(cropArrayLocal)
-		consolePrint("\n")
+		if len(cropArrayLocal) == 0 {
+			consolePrint("\x1b[31;1m", "", "\x1b[0m\n")
+			return
+		}
+		crop := cropArrayLocal[0]
+		for _, v := range cropArrayLocal {
+			if v.w > crop.w || v.h > crop.h {
+				crop = v
+			}
+		}
+		consolePrint("\x1b[30;1m", secondsToHHMMSS(strconv.FormatFloat(tempDur, 'f', -1, 64)), " crop=\x1b[0m", crop.w, "\x1b[30;1m:\x1b[0m", crop.h, "\x1b[30;1m:\x1b[0m", crop.x, "\x1b[30;1m:\x1b[0m", crop.y, "\n")
 	}
 }
 

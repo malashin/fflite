@@ -1,4 +1,4 @@
-# fflite ![version: v0.1.30](https://img.shields.io/badge/version-v0.1.30-green.svg) [![license: GPL v3](https://img.shields.io/badge/license-GPL%20v3-blue.svg)](http://www.gnu.org/licenses/gpl-3.0)
+# fflite ![version: v0.1.31](https://img.shields.io/badge/version-v0.1.31-green.svg) [![license: GPL v3](https://img.shields.io/badge/license-GPL%20v3-blue.svg)](http://www.gnu.org/licenses/gpl-3.0)
 `fflite` is [FFmpeg](https://www.ffmpeg.org/) wrapper for minimalistic progress visualization while keeping the flexability of CLI.
 
 ### Apart from less obtrusive CLI output there is added functionality:
@@ -7,6 +7,7 @@
 * Input and output files can be named using `old::new` pattern. This will take the first input name and replace `old` part to the `new` part, put the result instead of `old::new` pattern (`fflite -i film_video.mp4 -i video.mp4::audio.ac3`).
 * Command presets for less typing.
 * Error logging.
+* Crop detection mode.
 * BEEP sound at the end of encoding process.
 * ANSI escape sequences (colors) are supported in Windows terminals (cmd, PowerShell). [go-ansi](https://github.com/k0kubun/go-ansi)
 

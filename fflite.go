@@ -13,7 +13,7 @@ import (
 )
 
 // Global variables.
-var version = "v0.1.30"
+var version = "v0.1.31"
 var presets = map[string]string{
 	`^\@crf(\d+)$`:  "-an -vcodec libx264 -preset medium -crf ${1} -pix_fmt yuv420p -g 0 -map_metadata -1 -map_chapters -1",
 	`^\@ac(\d+)$`:   "-vn -acodec ac3 -ab ${1}k -map_metadata -1 -map_chapters -1",
@@ -41,7 +41,8 @@ var regexpMap = map[string]*regexp.Regexp{
 	"timeSpeed":             regexp.MustCompile(`.* time=.*?(\d{2}\:\d{2}\:\d{2}\.\d{2}).* speed=.*?(\d+\.\d+|\d+)x`),
 	"currentSecond":         regexp.MustCompile(`.*size=.* time=.*?(\d{2}\:\d{2}\:\d{2}\.\d{2}).*`),
 	"hide":                  regexp.MustCompile(`(.*Press \[q\] to stop.*|.*Last message repeated.*)`),
-	"crop":                  regexp.MustCompile(`.*cropdetect.*(crop=(\d+):(\d+):(\d+):(\d+)).*`),
+	"crop":                  regexp.MustCompile(`.*cropdetect.*(crop=(-?\d+):(-?\d+):(-?\d+):(-?\d+)).*`),
+	"cropMode":              regexp.MustCompile(`crop(.*)`),
 	"fileNameReplace":       regexp.MustCompile(`(.+)\:\:(.*)`),
 }
 
@@ -50,6 +51,8 @@ func main() {
 	var batchInputName, firstInput string
 	var errors, errorsArray []string
 	var sigint, ffmpeg, nologs, crop, sync, isBatchInputFile bool
+	var cropDetectNumber int
+	var cropDetectLimit float64
 	// Intercept interrupt signal
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
@@ -65,7 +68,7 @@ func main() {
 		help()
 		os.Exit(0)
 	}
-	ffmpeg, nologs, crop, sync, args = parseOptions(args)
+	ffmpeg, nologs, crop, cropDetectNumber, cropDetectLimit, sync, args = parseOptions(args)
 	// Create slice containing arguments of ffmpeg command.
 	ffCommand := []string{}
 	// Parse all arguments and apply presets if needed.
@@ -155,7 +158,7 @@ func main() {
 				switch {
 				// Run cropDetect if crop mode is enabled.
 				case crop:
-					cropDetect(firstInput)
+					cropDetect(firstInput, cropDetectNumber, cropDetectLimit)
 					continue
 				// Run audioSync if sync mode is enabled.
 				case sync:
@@ -206,7 +209,7 @@ func main() {
 		switch {
 		// Run cropDetect if crop mode is enabled.
 		case crop:
-			cropDetect(firstInput)
+			cropDetect(firstInput, cropDetectNumber, cropDetectLimit)
 			return
 		// Run audioSync if sync mode is enabled.
 		case sync:
