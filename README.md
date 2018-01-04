@@ -7,7 +7,7 @@
 * Input and output files can be named using `old::new` pattern. This will take the first input name and replace `old` part to the `new` part, put the result instead of `old::new` pattern (`fflite -i film_video.mp4 -i video.mp4::audio.ac3`).
 * Command presets for less typing.
 * Error logging.
-* Crop detection mode.
+* Crop detection mode (`fflite crop[crop_number:crop_limit] -i input_file`). If `fflite crop[digit]` is passed it will be treated as `crop_limit` if digit is less then one, `crop_number` otherwise.
 * BEEP sound at the end of encoding process.
 * ANSI escape sequences (colors) are supported in Windows terminals (cmd, PowerShell). [go-ansi](https://github.com/k0kubun/go-ansi)
 
