@@ -204,9 +204,23 @@ func readLines(path string) ([]string, error) {
 
 // consolePrint prints str to console while cursor is hidden.
 func consolePrint(str ...interface{}) {
+	if !isTerminal {
+		for _, s := range str {
+			fmt.Print(stripEscapesFromString(fmt.Sprintf("%v", s)))
+		}
+		return
+	}
 	ansi.CursorHide()
 	ansi.Print(str...)
 	ansi.CursorShow()
+}
+
+// bell rings bell send by typing bell ANSI code to terminal.
+func bell() {
+	if !isTerminal {
+		return
+	}
+	consolePrint("\x07")
 }
 
 // isWarningSpamming checks if warning message comes up too often and omits it if needed.
@@ -361,7 +375,7 @@ func parseFinish(line string, sigint bool, progress string, lastLine string, sta
 }
 
 func stripEscapesFromString(str string) string {
-	return regexp.MustCompile(`(\x1b\[\d+m|\x1b\[\d+;\d+m)`).ReplaceAllString(str, "")
+	return regexp.MustCompile(`(\x1b\[\d+(;\d+)*m)`).ReplaceAllString(str, "")
 }
 
 func writeStringArrayToFile(filename string, strArray []string, perm os.FileMode) {
@@ -756,7 +770,7 @@ func encodeFile(ffCommand []string, batchMode bool, ffmpeg bool) (errorsArray []
 	// If at least one file was encoded.
 	if encodingFinished && !batchMode {
 		// Play bell sound.
-		consolePrint("\x07")
+		bell()
 	}
 
 	return

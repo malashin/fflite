@@ -10,10 +10,11 @@ import (
 	"syscall"
 
 	ansi "github.com/k0kubun/go-ansi"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 // Global variables.
-var version = "v0.1.31"
+var version = "v0.1.32"
 var presets = map[string]string{
 	`^\@crf(\d+)$`:  "-an -vcodec libx264 -preset medium -crf ${1} -pix_fmt yuv420p -g 0 -map_metadata -1 -map_chapters -1",
 	`^\@ac(\d+)$`:   "-vn -acodec ac3 -ab ${1}k -map_metadata -1 -map_chapters -1",
@@ -46,6 +47,8 @@ var regexpMap = map[string]*regexp.Regexp{
 	"fileNameReplace":       regexp.MustCompile(`(.+)\:\:(.*)`),
 }
 
+var isTerminal = true
+
 func main() {
 	// Main variables.
 	var batchInputName, firstInput string
@@ -60,6 +63,10 @@ func main() {
 		<-c
 		sigint = true
 	}()
+	// Check if programs output is terminal.
+	if !terminal.IsTerminal(int(os.Stdout.Fd())) {
+		isTerminal = false
+	}
 	// Convert passed arguments into array.
 	args := os.Args[1:]
 	// If program is executed without arguments.
@@ -181,7 +188,7 @@ func main() {
 			}
 		}
 		// Play bell sound.
-		consolePrint("\x07")
+		bell()
 	} else {
 		filename := ""
 		firstInput = ""
