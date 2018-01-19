@@ -14,7 +14,7 @@ import (
 )
 
 // Global variables.
-var version = "v0.1.32"
+var version = "v0.1.33"
 var presets = map[string]string{
 	`^\@crf(\d+)$`:  "-an -vcodec libx264 -preset medium -crf ${1} -pix_fmt yuv420p -g 0 -map_metadata -1 -map_chapters -1",
 	`^\@ac(\d+)$`:   "-vn -acodec ac3 -ab ${1}k -map_metadata -1 -map_chapters -1",
@@ -81,6 +81,9 @@ func main() {
 	// Parse all arguments and apply presets if needed.
 	for i := 0; i < len(args); i++ {
 		if i+1 < len(args) {
+			if (args[i] == "-i") && (firstInput == "") {
+				firstInput = args[i+1]
+			}
 			if (args[i] == "-i") && (strings.HasSuffix(args[i+1], ".txt")) {
 				if batchInputName == "" {
 					batchInputName = args[i+1]
@@ -90,6 +93,11 @@ func main() {
 					os.Exit(1)
 				}
 			} else if (args[i] == "-i") && (strings.ContainsAny(args[i+1], "*?[")) {
+				// If file with that name exists, it is not a glob pattern.
+				if _, err := os.Stat(args[i+1]); err == nil {
+					ffCommand = append(ffCommand, argsPreset(args[i])...)
+					continue
+				}
 				if batchInputName == "" {
 					batchInputName = args[i+1]
 					isBatchInputFile = false
@@ -97,9 +105,6 @@ func main() {
 					consolePrint("\x1b[31;1mOnly one .txt file or glob pattern is allowed for batch execution.\x1b[0m\n")
 					os.Exit(1)
 				}
-			}
-			if (args[i] == "-i") && (firstInput == "") {
-				firstInput = args[i+1]
 			}
 		}
 		ffCommand = append(ffCommand, argsPreset(args[i])...)
