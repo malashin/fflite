@@ -292,7 +292,7 @@ func parseEncoding(line string, lastLineFull string, duration float64, speedArra
 	currentSpeed, _ := strconv.ParseFloat(timeSpeed[1], 64)
 	progress := "N\\A"
 	eta := "N\\A"
-	line = strings.TrimSpace(regexpMap["encoding"].ReplaceAllString(line, "${1} ${2}"))
+	line = strings.TrimSpace(regexpMap["encoding"].ReplaceAllString(line, "${1} ${3} \x1b[33;1m${2}\x1b[0m"))
 	if strings.Contains(line, "dup=0 ") {
 		line = strings.Replace(line, "dup=0 ", "", -1)
 	}
@@ -324,7 +324,7 @@ func parseEncodingNoSpeed(line string, lastLineFull string, duration float64, st
 	}
 	progress := "N\\A"
 	eta := "N\\A"
-	line = strings.TrimSpace(regexpMap["encodingNoSpeed"].ReplaceAllString(line, "${1}${3}"))
+	line = strings.TrimSpace(regexpMap["encodingNoSpeed"].ReplaceAllString(line, "${1} speed="+strconv.FormatFloat(currentSpeed, 'f', 2, 64)+"x \x1b[33;1m${2}\x1b[0m"))
 	if strings.Contains(line, "dup=0 ") {
 		line = strings.Replace(line, "dup=0 ", "", -1)
 	}
@@ -336,7 +336,7 @@ func parseEncodingNoSpeed(line string, lastLineFull string, duration float64, st
 		progress := truncPad(strconv.FormatInt(int64(currentSecond/(duration/100.0)), 10), 3, 'r')
 		eta, speedArray = getETA(currentSpeed, duration, currentSecond, speedArray)
 		eta = secondsToHHMMSS(eta)
-		line = "\x1b[33;1m" + progress + "%\x1b[0m eta=" + eta + " " + line + " speed=" + strconv.FormatFloat(currentSpeed, 'f', 2, 64) + "x"
+		line = "\x1b[33;1m" + progress + "%\x1b[0m eta=" + eta + " " + line
 	} else {
 		line = "\x1b[33;1m" + progress + "\x1b[0m " + line + " speed=" + strconv.FormatFloat(currentSpeed, 'f', 2, 64) + "x"
 	}

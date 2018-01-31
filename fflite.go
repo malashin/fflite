@@ -14,7 +14,7 @@ import (
 )
 
 // Global variables.
-var version = "v0.1.33"
+var version = "v0.1.34"
 var presets = map[string]string{
 	`^\@crf(\d+)$`:  "-an -vcodec libx264 -preset medium -crf ${1} -pix_fmt yuv420p -g 0 -map_metadata -1 -map_chapters -1",
 	`^\@ac(\d+)$`:   "-vn -acodec ac3 -ab ${1}k -map_metadata -1 -map_chapters -1",
@@ -37,8 +37,8 @@ var regexpMap = map[string]*regexp.Regexp{
 	"stream":                regexp.MustCompile(`.*Stream #(\d+\:\d+)(.*?):(.*)`),
 	"errors":                regexp.MustCompile(`(.*No such file.*|.*Invalid data.*|.*At least one output file must be specified.*|.*Unrecognized option.*|.*Option not found.*|.*matches no streams.*|.*not supported.*|.*Invalid argument.*|.*Error.*|.*not exist.*|.*-vf\/-af\/-filter.*|.*No such filter.*|.*does not contain.*|.*Not overwriting - exiting.*|.*denied.*|.*\[y\/N\].*|.*Trailing options were found on the commandline.*|.*unconnected output.*|.*Cannot create the link.*|.*Media type mismatch.*|.*moov atom not found.|.*Cannot find a matching stream.*|.*Unknown encoder.*|.*experimental codecs are not enabled.*|.*Alternatively use the non experimental encoder.*|.*Failed to configure.*|.*do not match the corresponding output.*|.*cannot be used together.*|.*Invalid out channel name.*|.*Protocol not found.*|.*Invalid loglevel.*|\"quiet\"|\"panic\"|\"fatal\"|\"error\"|\"warning\"|\"info\"|\"verbose\"|\"debug\"|\"trace\"|.*Unable to parse.*|.*already exists. Exiting.*)`),
 	"warnings":              regexp.MustCompile(`(.*Warning:.*|.*Past duration.*too large.*|.*Starting second pass.*)`),
-	"encoding":              regexp.MustCompile(`.* (time=.*) bitrate=.*(?:\/s|N\/A)(?: |.*)(dup=.*speed=.*|speed=.*)`),
-	"encodingNoSpeed":       regexp.MustCompile(`.* (time=.*) bitrate=.*(\/s|N\/A)(.*)`),
+	"encoding":              regexp.MustCompile(`.* (time=.*) bitrate=.*(?:\/s|N\/A)(?: |.*)(dup=.*)* *(speed=.*x) *`),
+	"encodingNoSpeed":       regexp.MustCompile(`.* (time=.*) bitrate=.*(?:\/s|N\/A)(?: |.*)(dup=.*)* *`),
 	"timeSpeed":             regexp.MustCompile(`.* time=.*?(\d{2}\:\d{2}\:\d{2}\.\d{2}).* speed=.*?(\d+\.\d+|\d+)x`),
 	"currentSecond":         regexp.MustCompile(`.*size=.* time=.*?(\d{2}\:\d{2}\:\d{2}\.\d{2}).*`),
 	"hide":                  regexp.MustCompile(`(.*Press \[q\] to stop.*|.*Last message repeated.*)`),
