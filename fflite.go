@@ -28,7 +28,7 @@ var presets = map[string]string{
 }
 var regexpMap = map[string]*regexp.Regexp{
 	"streamMapping":         regexp.MustCompile(`Stream mapping:`),
-	"streamMappingFinished": regexp.MustCompile(`.*Press \[q\] to stop.*`),
+	"streamMappingFinished": regexp.MustCompile(`.*->.*`),
 	"encodingFinished":      regexp.MustCompile(`.*video:.*audio:.*subtitle:.*global headers:.*`),
 	"input":                 regexp.MustCompile(`Input #(\d+),.*from \'(.*)\'\:`),
 	"output":                regexp.MustCompile(`Output #(\d+),.*to \'(.*)\'\:`),
