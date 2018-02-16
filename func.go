@@ -711,6 +711,8 @@ func encodeFile(ffCommand []string, batchMode bool, ffmpeg bool) (errorsArray []
 	// Pipe terminals stdin to executed ffmpeg instance.
 	// Used for answering ffmpegs questions.
 	cmd.Stdin = os.Stdin
+	// Pipe ffmpegs stdout to fflite to allow piping of output.
+	cmd.Stdout = os.Stdout
 	// Start ffmpeg.
 	cmd.Start()
 	// Buffer all the messages coming from ffmpegs stderr.
