@@ -721,7 +721,7 @@ func encodeFile(ffCommand []string, batchMode bool, ffmpeg bool) (errorsArray []
 			switch {
 			case !encodingStarted && regexpMap["streamMapping"].MatchString(line):
 				streamMapping = true
-			case streamMapping && !regexpMap["streamMappingFinished"].MatchString(line):
+			case streamMapping && !strings.Contains(line, "->"):
 				streamMapping = false
 			case !encodingStarted && (regexpMap["encoding"].MatchString(line) || regexpMap["encodingNoSpeed"].MatchString(line)):
 				startTime = time.Now()
