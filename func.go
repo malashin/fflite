@@ -258,7 +258,11 @@ func parseDuration(line string) (string, float64) {
 }
 
 func parseStream(line string) string {
-	return regexpMap["stream"].ReplaceAllString(line, "    \x1b[36;1m${1}\x1b[0m \x1b[30;1m"+strings.ToUpper("${2}")+"\x1b[0m${3}\n")
+	lng := regexpMap["stream"].ReplaceAllString(line, "${2}")
+	if lng == "" {
+		return regexpMap["stream"].ReplaceAllString(line, "    \x1b[36;1m${1}\x1b[0m ${3}\n")
+	}
+	return regexpMap["stream"].ReplaceAllString(line, "    \x1b[36;1m${1}\x1b[0m \x1b[30;1m${2}\x1b[0m ${3}\n")
 }
 
 func parseErrors(line string, lastLineFull string, batchMode bool, errorsArray []string) (string, []string) {
