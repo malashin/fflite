@@ -727,11 +727,12 @@ func encodeFile(ffCommand []string, batchMode bool, ffmpeg bool) (errorsArray []
 			switch {
 			case !encodingStarted && regexpMap["streamMapping"].MatchString(line):
 				streamMapping = true
-			case streamMapping && !strings.Contains(line, "->"):
+			case !encodingStarted && streamMapping && !strings.Contains(line, "->"):
 				streamMapping = false
-			case !encodingStarted && (regexpMap["encoding"].MatchString(line) || regexpMap["encodingNoSpeed"].MatchString(line)):
+			case !encodingStarted && (regexpMap["encoding"].MatchString(line) || regexpMap["encodingNoSpeed"].MatchString(line)) && regexpMap["currentSecond"].ReplaceAllString(line, "$1") != "00:00:00.00":
 				startTime = time.Now()
 				prevUptime = time.Since(startTime)
+				streamMapping = false
 				encodingStarted = true
 			case encodingStarted && regexpMap["encodingFinished"].MatchString(line):
 				encodingStarted, encodingFinished = parseFinish(line, sigint, progress, lastLine, startTime)
@@ -752,14 +753,17 @@ func encodeFile(ffCommand []string, batchMode bool, ffmpeg bool) (errorsArray []
 				line, errorsArray = parseErrors(line, lastLineFull, batchMode, errorsArray)
 			case regexpMap["warnings"].MatchString(line):
 				line, warningArray = parseWarnings(line, lastLineFull, warningArray, warningSpam)
-			case regexpMap["encoding"].MatchString(line):
-				line, lastLine, progress, speedArray = parseEncoding(line, lastLineFull, duration, speedArray)
-			case regexpMap["encodingNoSpeed"].MatchString(line):
-				line, lastLine, progress, speedArray = parseEncodingNoSpeed(line, lastLineFull, duration, startTime, prevUptime, prevSecond, speedArray)
 			case regexpMap["hide"].MatchString(line):
 				line = ""
 			case encodingStarted:
-				line, lastLineUsed, errorsArray = parseEncodingErrors(line, lastLineFull, lastLineUsed, lastLine, errorsArray, progress)
+				switch {
+				case regexpMap["encoding"].MatchString(line):
+					line, lastLine, progress, speedArray = parseEncoding(line, lastLineFull, duration, speedArray)
+				case regexpMap["encodingNoSpeed"].MatchString(line):
+					line, lastLine, progress, speedArray = parseEncodingNoSpeed(line, lastLineFull, duration, startTime, prevUptime, prevSecond, speedArray)
+				default:
+					line, lastLineUsed, errorsArray = parseEncodingErrors(line, lastLineFull, lastLineUsed, lastLine, errorsArray, progress)
+				}
 			default:
 				line = ""
 			}
