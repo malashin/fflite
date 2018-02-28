@@ -409,9 +409,7 @@ func argsPreset(input string) []string {
 func getUpstreamVersion() string {
 	resp, err := http.Get("https://raw.githubusercontent.com/malashin/fflite/master/fflite.go")
 	if err != nil {
-		consolePrint("\x1b[31;1m")
-		consolePrint(err)
-		consolePrint("\x1b[0m\n")
+		consolePrint("\x1b[31;1m", err, "\x1b[0m\n")
 		return ""
 	}
 	defer resp.Body.Close()
@@ -426,6 +424,33 @@ func getUpstreamVersion() string {
 	version := r.FindString(string(bytes))
 	version = r.ReplaceAllString(version, "$1")
 	return version
+}
+
+func updateVersion() error {
+	upstreamVersion := getUpstreamVersion()
+	if version == upstreamVersion {
+		consolePrint("fflite version \x1b[32;1m" + version + "\x1b[0m.\n")
+		consolePrint("\x1b[32;1mYour fflite is up to date.\x1b[0m\n")
+		return nil
+	}
+	consolePrint("fflite version is \x1b[31;1m" + version + "\x1b[0m.\n")
+	consolePrint("Latest version is \x1b[33;1m" + upstreamVersion + "\x1b[0m.\n")
+	consolePrint("\x1b[31;1mYour fflite is out of date.\x1b[0m\n")
+	consolePrint("\x1b[30;1mgo get -u -v github.com/malashin/fflite\x1b[0m\n")
+	cmd := exec.Command("go", "get", "-u", "-v", "github.com/malashin/fflite")
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return err
+	}
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Start()
+	scanner := bufio.NewScanner(stderr)
+	scanner.Split(scanLines)
+	for scanner.Scan() {
+		consolePrint(scanner.Text() + "\n")
+	}
+	return nil
 }
 
 func parseOptions(input []string) (ffmpeg bool, nologs bool, crop bool, cropDetectNumber int, cropDetectLimit float64, sync bool, args []string) {
@@ -488,10 +513,16 @@ func parseOptions(input []string) (ffmpeg bool, nologs bool, crop bool, cropDete
 			consolePrint("Latest version is \x1b[33;1m" + upstreamVersion + "\x1b[0m.\n")
 			consolePrint("\x1b[31;1mYour fflite is out of date.\x1b[0m\n")
 			consolePrint("Use this command to update it:\n")
-			consolePrint("\x1b[30;1mgo get -u github.com/malashin/fflite\x1b[0m\n")
+			consolePrint("\x1b[30;1mfflite update\x1b[0m\n")
 		} else {
 			consolePrint("fflite version \x1b[32;1m" + version + "\x1b[0m.\n")
 			consolePrint("\x1b[32;1mYour fflite is up to date.\x1b[0m\n")
+		}
+		os.Exit(0)
+	case input[0] == "update":
+		err := updateVersion()
+		if err != nil {
+			consolePrint("\x1b[31;1m", err, "\x1b[0m\n")
 		}
 		os.Exit(0)
 	default:
@@ -511,7 +542,8 @@ func help() {
 	consolePrint("    Preset arguments are replaced with specific strings.\n")
 	consolePrint("\n\x1b[33;1mOptions:\x1b[0m\n")
 	consolePrint("    ffmpeg       original ffmpeg text output\n")
-	consolePrint("    version      check for updates\n")
+	consolePrint("    version      print fflite version and check for updates\n")
+	consolePrint("    update       update fflite version using \"go get\"\n")
 	consolePrint("    nologs       do not create \".err\" error log files\n")
 	consolePrint("    crop         audomated cropDetect module \"fflite crop[crop_number:crop_limit] -i input_file\"\n")
 	consolePrint("    sync         sync 2nd input audio files duration to the duration on the first input \"fflite sync -i input_file -i input_file\"\n")
