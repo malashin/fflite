@@ -155,7 +155,7 @@ func main() {
 						}
 					}
 					// For each output filename.
-					if !(strings.HasPrefix(batchCommand[i], "-")) && (batchCommand[i] != "NUL") && (!(strings.HasPrefix(batchCommand[i-1], "-")) || batchCommand[i-1] == "-1") {
+					if !(strings.HasPrefix(batchCommand[i], "-")) && (batchCommand[i] != "NUL") && (!(strings.HasPrefix(batchCommand[i-1], "-")) || batchCommand[i-1] == "-1" || batchCommand[i-1] == "-stats") {
 						// Replace filename if it contains "old::new" pattern, append the output to input otherwise.
 						if regexpMap["fileNameReplace"].MatchString(batchCommand[i]) {
 							match := regexpMap["fileNameReplace"].FindStringSubmatch(batchCommand[i])
