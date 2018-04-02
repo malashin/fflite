@@ -182,6 +182,9 @@ func sliceFromFileOrGlob(input string, batchFile bool) ([]string, error) {
 	if batchFile {
 		return readLines(input)
 	}
+	if strings.ContainsAny(input, "|") {
+		return strings.Split(input, "|"), nil
+	}
 	return filepath.Glob(input)
 }
 
