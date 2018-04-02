@@ -152,7 +152,7 @@ func getETA(currentSpeed, duration, currentSecond float64, speedArray []float64)
 }
 
 // truncPad truncs or pads string to needed length.
-// If side is 'r' the sring is padded and aligned to the right side.
+// If side is 'r' the string is padded and aligned to the right side.
 // Otherwise it is aligned to the left side.
 func truncPad(s string, n int, side byte) string {
 	len := utf8.RuneCountInString(s)
