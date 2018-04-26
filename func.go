@@ -585,6 +585,7 @@ func cropDetect(firstInput string, cropDetectCount int, cropDetectLimit float64)
 	}
 	output := string(regexpMap["durationHHMMSSMS"].Find(stdoutStderr))
 	duration := hhmmssmsToSeconds(regexpMap["durationHHMMSSMS"].ReplaceAllString(output, "${1}"))
+	consolePrint("\x1b[32;1m", firstInput, "\x1b[0m\n")
 	consolePrint("\x1b[30;1m", "Running cropDetect ", cropDetectCount, " times, with the following parameters ", cropDetectParams, "\x1b[0m\n")
 	for i := 1; i <= cropDetectCount; i++ {
 		var cropArrayLocal []crop
