@@ -775,15 +775,6 @@ func encodeFile(ffCommand []string, batchMode bool, ffmpeg bool) (errorsArray []
 			}
 			// Modify the lines using regexp.
 			switch {
-			case encodingStarted:
-				switch {
-				case regexpMap["encoding"].MatchString(line):
-					line, lastLine, progress, speedArray = parseEncoding(line, lastLineFull, duration, speedArray)
-				case regexpMap["encodingNoSpeed"].MatchString(line):
-					line, lastLine, progress, speedArray = parseEncodingNoSpeed(line, lastLineFull, duration, startTime, prevUptime, prevSecond, speedArray)
-				default:
-					line, lastLineUsed, errorsArray = parseEncodingErrors(line, lastLineFull, lastLineUsed, lastLine, errorsArray, progress)
-				}
 			case streamMapping:
 				line = "\x1b[30;1m  " + line + "\x1b[0m\n"
 			case regexpMap["input"].MatchString(line):
@@ -794,12 +785,21 @@ func encodeFile(ffCommand []string, batchMode bool, ffmpeg bool) (errorsArray []
 				line, duration = parseDuration(line)
 			case regexpMap["stream"].MatchString(line):
 				line = parseStream(line)
-			case regexpMap["errors"].MatchString(line):
-				line, errorsArray = parseErrors(line, lastLineFull, batchMode, errorsArray)
 			case regexpMap["warnings"].MatchString(line):
 				line, warningArray = parseWarnings(line, lastLineFull, warningArray, warningSpam)
 			case regexpMap["hide"].MatchString(line):
 				line = ""
+			case encodingStarted:
+				switch {
+				case regexpMap["encoding"].MatchString(line):
+					line, lastLine, progress, speedArray = parseEncoding(line, lastLineFull, duration, speedArray)
+				case regexpMap["encodingNoSpeed"].MatchString(line):
+					line, lastLine, progress, speedArray = parseEncodingNoSpeed(line, lastLineFull, duration, startTime, prevUptime, prevSecond, speedArray)
+				default:
+					line, lastLineUsed, errorsArray = parseEncodingErrors(line, lastLineFull, lastLineUsed, lastLine, errorsArray, progress)
+				}
+			case regexpMap["errors"].MatchString(line):
+				line, errorsArray = parseErrors(line, lastLineFull, batchMode, errorsArray)
 			default:
 				line = ""
 			}

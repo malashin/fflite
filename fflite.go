@@ -14,7 +14,7 @@ import (
 )
 
 // Global variables.
-var version = "v0.1.42"
+var version = "v0.1.43"
 var presets = map[string]string{
 	`^\@crf(\d+)$`:   "-an -vcodec libx264 -preset medium -crf ${1} -pix_fmt yuv420p -g 0 -map_metadata -1 -map_chapters -1",
 	`^\@ac(\d+)$`:    "-vn -acodec ac3 -ab ${1}k -map_metadata -1 -map_chapters -1",
