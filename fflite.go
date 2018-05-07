@@ -14,7 +14,7 @@ import (
 )
 
 // Global variables.
-var version = "v0.1.43"
+var version = "v0.1.44"
 var presets = map[string]string{
 	`^\@crf(\d+)$`:   "-an -vcodec libx264 -preset medium -crf ${1} -pix_fmt yuv420p -g 0 -map_metadata -1 -map_chapters -1",
 	`^\@ac(\d+)$`:    "-vn -acodec ac3 -ab ${1}k -map_metadata -1 -map_chapters -1",
@@ -36,7 +36,7 @@ var regexpMap = map[string]*regexp.Regexp{
 	"durationHHMMSSMS": regexp.MustCompile(`.*Duration: (\d{2}\:\d{2}\:\d{2}\.\d{2}).*`),
 	"stream":           regexp.MustCompile(`.*Stream #(\d+\:\d+)(.*?)\: (.*)`),
 	"errors":           regexp.MustCompile(`(.*No such file.*|.*Invalid data.*|.*Unrecognized option.*|.*Option not found.*|.*matches no streams.*|.*not supported.*|.*Invalid argument.*|.*Error.*|.*not exist.*|.*-vf\/-af\/-filter.*|.*No such filter.*|.*does not contain.*|.*Not overwriting - exiting.*|.*denied.*|.*\[y\/N\].*|.*Trailing options were found on the commandline.*|.*unconnected output.*|.*Cannot create the link.*|.*Media type mismatch.*|.*moov atom not found.|.*Cannot find a matching stream.*|.*Unknown encoder.*|.*experimental codecs are not enabled.*|.*Alternatively use the non experimental encoder.*|.*Failed to configure.*|.*do not match the corresponding output.*|.*cannot be used together.*|.*Invalid out channel name.*|.*Protocol not found.*|.*Invalid loglevel.*|\"quiet\"|\"panic\"|\"fatal\"|\"error\"|\"warning\"|\"info\"|\"verbose\"|\"debug\"|\"trace\"|.*Unable to parse.*|.*already exists. Exiting.*|.*unable to load.*|.*\, line \d+\).*|.*error.*|.*Too many inputs specified.*)`),
-	"warnings":         regexp.MustCompile(`(.*Warning:.*|.*Past duration.*too large.*|.*Starting second pass.*|.*At least one output file must be specified.*|.*fontselect:.*)`),
+	"warnings":         regexp.MustCompile(`(.*Warning:.*|.*Past duration.*too large.*|.*Starting second pass.*|.*At least one output file must be specified.*|.*fontselect:.*|.*Bitrate .* is extremely low, maybe you mean.*|.*parameter is set too low.*)`),
 	"encoding":         regexp.MustCompile(`.*(time=.*) bitrate=.*(?:\/s|N\/A)(?: |.*)(dup=.*)* *(speed=.*x) *`),
 	"encodingNoSpeed":  regexp.MustCompile(`.*(time=.*) bitrate=.*(?:\/s|N\/A)(?: |.*)(dup=.*)* *`),
 	"timeSpeed":        regexp.MustCompile(`.*time=.*?(\d{2}\:\d{2}\:\d{2}\.\d{2}).* speed=.*?(\d+\.\d+|\d+)x`),
@@ -53,7 +53,7 @@ func main() {
 	// Main variables.
 	var batchInputName, firstInput string
 	var errors, errorsArray []string
-	var sigint, ffmpeg, nologs, crop, sync, isBatchInputFile bool
+	var sigint, ffmpeg, nologs, crop, sync, mute, isBatchInputFile bool
 	var cropDetectNumber int
 	var cropDetectLimit float64
 	// Intercept interrupt signal
@@ -75,7 +75,7 @@ func main() {
 		help()
 		os.Exit(0)
 	}
-	ffmpeg, nologs, crop, cropDetectNumber, cropDetectLimit, sync, args = parseOptions(args)
+	ffmpeg, nologs, crop, cropDetectNumber, cropDetectLimit, sync, mute, args = parseOptions(args)
 	// Create slice containing arguments of ffmpeg command.
 	ffCommand := []string{}
 	// Parse all arguments and apply presets if needed.
@@ -180,7 +180,7 @@ func main() {
 				case sync:
 					errors, filename = audioSync(batchCommand, true)
 				default:
-					errors, filename = encodeFile(batchCommand, true, ffmpeg)
+					errors, filename = encodeFile(batchCommand, true, ffmpeg, mute)
 				}
 				// Append errors to errorsArray.
 				if len(errors) > 0 {
@@ -197,7 +197,7 @@ func main() {
 			}
 		}
 		// Play bell sound.
-		bell()
+		bell(mute)
 	} else {
 		filename := ""
 		firstInput = ""
@@ -231,7 +231,7 @@ func main() {
 		case sync:
 			errors, filename = audioSync(ffCommand, false)
 		default:
-			errors, filename = encodeFile(ffCommand, false, ffmpeg)
+			errors, filename = encodeFile(ffCommand, false, ffmpeg, mute)
 		}
 		// Append errors to errorsArray.
 		if len(errors) > 0 {

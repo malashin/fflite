@@ -23,6 +23,47 @@ import (
 	ansi "github.com/k0kubun/go-ansi"
 )
 
+// help returns usage information and programm version.
+func help() {
+	consolePrint("fflite is FFmpeg wrapper for minimalistic progress visualization while keeping the flexability of CLI.\n")
+	consolePrint("fflite version \x1b[33;1m" + version + "\x1b[0m.\n")
+	consolePrint("\n\x1b[33;1mUsage:\x1b[0m\n")
+	consolePrint("    It uses the same syntax as FFmpeg:\n\n")
+	consolePrint("    fflite [fflite_option] [global_options] {[input_file_options] -i input_file} ... {[output_file_options] output_file} ...\n\n")
+	consolePrint("    For batch execution pass \".txt\" file or a glob pattern as input.\n")
+	consolePrint("    Preset arguments are replaced with specific strings.\n")
+	consolePrint("\n\x1b[33;1mOptions:\x1b[0m\n")
+	consolePrint("    ffmpeg       original ffmpeg text output\n")
+	consolePrint("    version      print fflite version and check for updates\n")
+	consolePrint("    update       update fflite version using \"go get\"\n")
+	consolePrint("    nologs       do not create \".err\" error log files\n")
+	consolePrint("    crop         audomated cropDetect module \"fflite crop[crop_number:crop_limit] -i input_file\"\n")
+	consolePrint("    sync         sync 2nd input audio files duration to the duration on the first input \"fflite sync -i input_file -i input_file\"\n")
+	consolePrint("    mute         removes bell sound at the end of ecoding\n")
+	consolePrint("\n\x1b[33;1mPresets:\x1b[0m\n")
+	// Find maximum length of preset keys.
+	length := 0
+	for key := range presets {
+		if len(key[2:len(key)-1]) > length {
+			length = len(key[2 : len(key)-1])
+		}
+	}
+	// Sort all presets alphabetically.
+	var keys []string
+	for k := range presets {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	// Print out all presets.
+	for _, key := range keys {
+		consolePrint("    " + key[2:len(key)-1] + strings.Repeat(" ", length-len(key[2:len(key)-1])) + "    " + presets[key] + "\n")
+	}
+	consolePrint("\n\x1b[33;1mFFmpeg documentation:\x1b[0m\n")
+	consolePrint("    www.ffmpeg.org/ffmpeg-all.html\n")
+	consolePrint("\n\x1b[33;1mGithub page:\x1b[0m\n")
+	consolePrint("    github.com/malashin/fflite\n")
+}
+
 // scanLines is a split function for a Scanner that returns each line of text, stripped of any trailing end-of-line marker.
 // The end-of-line markers are: `\r?\n`, '\r', "[y/N]".
 // The last non-empty line of input will be returned even if it has no newline.
@@ -219,7 +260,10 @@ func consolePrint(str ...interface{}) {
 }
 
 // bell rings bell send by typing bell ANSI code to terminal.
-func bell() {
+func bell(mute bool) {
+	if mute {
+		return
+	}
 	if !isTerminal {
 		return
 	}
@@ -456,7 +500,7 @@ func updateVersion() error {
 	return nil
 }
 
-func parseOptions(input []string) (ffmpeg bool, nologs bool, crop bool, cropDetectNumber int, cropDetectLimit float64, sync bool, args []string) {
+func parseOptions(input []string) (ffmpeg bool, nologs bool, crop bool, cropDetectNumber int, cropDetectLimit float64, sync bool, mute bool, args []string) {
 	switch {
 	// "ffmpeg" run the same command in ffmpeg instead of fflite.
 	case input[0] == "ffmpeg":
@@ -508,6 +552,9 @@ func parseOptions(input []string) (ffmpeg bool, nologs bool, crop bool, cropDete
 	case input[0] == "sync":
 		sync = true
 		args = input[1:]
+	case input[0] == "mute":
+		mute = true
+		args = input[1:]
 	// "update" check upstream version.
 	case input[0] == "version":
 		upstreamVersion := getUpstreamVersion()
@@ -532,46 +579,6 @@ func parseOptions(input []string) (ffmpeg bool, nologs bool, crop bool, cropDete
 		args = input
 	}
 	return
-}
-
-// help returns usage information and programm version.
-func help() {
-	consolePrint("fflite is FFmpeg wrapper for minimalistic progress visualization while keeping the flexability of CLI.\n")
-	consolePrint("fflite version \x1b[33;1m" + version + "\x1b[0m.\n")
-	consolePrint("\n\x1b[33;1mUsage:\x1b[0m\n")
-	consolePrint("    It uses the same syntax as FFmpeg:\n\n")
-	consolePrint("    fflite [fflite_option] [global_options] {[input_file_options] -i input_file} ... {[output_file_options] output_file} ...\n\n")
-	consolePrint("    For batch execution pass \".txt\" file or a glob pattern as input.\n")
-	consolePrint("    Preset arguments are replaced with specific strings.\n")
-	consolePrint("\n\x1b[33;1mOptions:\x1b[0m\n")
-	consolePrint("    ffmpeg       original ffmpeg text output\n")
-	consolePrint("    version      print fflite version and check for updates\n")
-	consolePrint("    update       update fflite version using \"go get\"\n")
-	consolePrint("    nologs       do not create \".err\" error log files\n")
-	consolePrint("    crop         audomated cropDetect module \"fflite crop[crop_number:crop_limit] -i input_file\"\n")
-	consolePrint("    sync         sync 2nd input audio files duration to the duration on the first input \"fflite sync -i input_file -i input_file\"\n")
-	consolePrint("\n\x1b[33;1mPresets:\x1b[0m\n")
-	// Find maximum length of preset keys.
-	length := 0
-	for key := range presets {
-		if len(key[2:len(key)-1]) > length {
-			length = len(key[2 : len(key)-1])
-		}
-	}
-	// Sort all presets alphabetically.
-	var keys []string
-	for k := range presets {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	// Print out all presets.
-	for _, key := range keys {
-		consolePrint("    " + key[2:len(key)-1] + strings.Repeat(" ", length-len(key[2:len(key)-1])) + "    " + presets[key] + "\n")
-	}
-	consolePrint("\n\x1b[33;1mFFmpeg documentation:\x1b[0m\n")
-	consolePrint("    www.ffmpeg.org/ffmpeg-all.html\n")
-	consolePrint("\n\x1b[33;1mGithub page:\x1b[0m\n")
-	consolePrint("    github.com/malashin/fflite\n")
 }
 
 // cropDetect parses the input file for the necessary cropping parameters.
@@ -692,12 +699,12 @@ func audioSync(args []string, batchMode bool) (errors []string, input2 string) {
 		"-1",
 		"-map_chapters",
 		"-1",
-		basename + "_SYNC.flac"}, batchMode, false)
+		basename + "_SYNC.flac"}, batchMode, false, false)
 	return
 }
 
 // encodeFile starts ffmpeg command with passed arguments in ffCommand []string array.
-func encodeFile(ffCommand []string, batchMode bool, ffmpeg bool) (errorsArray []string, firstInput string) {
+func encodeFile(ffCommand []string, batchMode, ffmpeg, mute bool) (errorsArray []string, firstInput string) {
 	var printCommand, progress, lastLine, lastLineUsed, lastLineFull string
 	var warningArray []string
 	var duration, prevSecond float64
@@ -816,7 +823,7 @@ func encodeFile(ffCommand []string, batchMode bool, ffmpeg bool) (errorsArray []
 	// If at least one file was encoded.
 	if encodingFinished && !batchMode {
 		// Play bell sound.
-		bell()
+		bell(mute)
 	}
 
 	return
