@@ -819,12 +819,12 @@ func encodeFile(ffCommand []string, batchMode, ffmpeg, mute bool) (errorsArray [
 			consolePrint(line + "\n")
 		}
 	}
-
+	// Wait for ffmpeg to finish.
+	cmd.Wait()
 	// If at least one file was encoded.
 	if encodingFinished && !batchMode {
 		// Play bell sound.
 		bell(mute)
 	}
-
 	return
 }
