@@ -48,6 +48,7 @@ var regexpMap = map[string]*regexp.Regexp{
 }
 
 var isTerminal = true
+var exitStatus = 0
 
 func main() {
 	// Main variables.
@@ -253,4 +254,5 @@ func main() {
 
 	// Show cursor in case its hidden before exit.
 	ansi.CursorShow()
+	os.Exit(exitStatus)
 }
