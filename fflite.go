@@ -14,7 +14,7 @@ import (
 )
 
 // Global variables.
-var version = "v0.1.44"
+var version = "v0.1.45"
 var presets = map[string]string{
 	`^\@crf(\d+)$`:   "-an -vcodec libx264 -preset medium -crf ${1} -pix_fmt yuv420p -g 0 -map_metadata -1 -map_chapters -1",
 	`^\@ac(\d+)$`:    "-vn -acodec ac3 -ab ${1}k -map_metadata -1 -map_chapters -1",
@@ -46,6 +46,8 @@ var regexpMap = map[string]*regexp.Regexp{
 	"cropMode":         regexp.MustCompile(`crop(.*)`),
 	"fileNameReplace":  regexp.MustCompile(`^(?:(.*)(?:\?))?(.*)\:\:(.*)$`),
 }
+
+var singlekeys = []string{"-L", "-version", "-buildconf", "-formats", "-muxers", "-demuxers", "-devices", "-codecs", "-decoders", "-encoders", "-bsfs", "-protocols", "-filters", "-pix_fmts", "-layouts", "-sample_fmts", "-colors", "-hwaccels", "-report", "-y", "-n", "-ignore_unknown", "-filter_threads", "-filter_complex_threads", "-stats", "-copy_unknown", "-benchmark", "-benchmark_all", "-stdin", "-dump", "-hex", "-vsync", "-frame_drop_threshold", "-async", "-copyts", "-start_at_zero", "-debug_ts", "-intra", "-sameq", "-same_quant", "-deinterlace", "-psnr", "-vstats", "-vstats_version", "-qphist", "-hwaccel_lax_profile_check", "-isync", "-override_ffserver", "-seek_timestamp", "-apad", "-reinit_filter", "-discard", "-disposition", "-accurate_seek", "-re", "-shortest", "-copyinkf", "-copypriorss", "-thread_queue_size", "-find_stream_info", "-autorotate", "-vn", "-dn", "-intra", "-sameq", "-same_quant", "-deinterlace", "-psnr", "-vstats", "-vstats_version", "-top", "-qphist", "-force_fps", "-an", "-guess_layout_max", "-sn", "-fix_sub_duration"}
 
 var isTerminal = true
 var exitStatus = 0
@@ -160,7 +162,7 @@ func main() {
 						}
 					}
 					// For each output filename.
-					if !(strings.HasPrefix(batchCommand[i], "-")) && (batchCommand[i] != "NUL") && (!(strings.HasPrefix(batchCommand[i-1], "-")) || batchCommand[i-1] == "-1" || batchCommand[i-1] == "-stats") {
+					if !(strings.HasPrefix(batchCommand[i], "-")) && (batchCommand[i] != "NUL") && (!(strings.HasPrefix(batchCommand[i-1], "-")) || batchCommand[i-1] == "-1" || contains(singlekeys, batchCommand[i-1])) {
 						// Replace filename if it contains "[prefix?]old::new" pattern, append the output to input otherwise.
 						if regexpMap["fileNameReplace"].MatchString(batchCommand[i]) {
 							match := regexpMap["fileNameReplace"].FindStringSubmatch(batchCommand[i])

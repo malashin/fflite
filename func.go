@@ -64,6 +64,16 @@ func help() {
 	consolePrint("    github.com/malashin/fflite\n")
 }
 
+// contains reports whether string is in string slice.
+func contains(slice []string, s string) bool {
+	for _, v := range slice {
+		if v == s {
+			return true
+		}
+	}
+	return false
+}
+
 // scanLines is a split function for a Scanner that returns each line of text, stripped of any trailing end-of-line marker.
 // The end-of-line markers are: `\r?\n`, '\r', "[y/N]".
 // The last non-empty line of input will be returned even if it has no newline.
