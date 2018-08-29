@@ -1,9 +1,9 @@
-# fflite ![version: v0.1.45](https://img.shields.io/badge/version-v0.1.45-green.svg) [![license: GPL v3](https://img.shields.io/badge/license-GPL%20v3-blue.svg)](http://www.gnu.org/licenses/gpl-3.0)
+# fflite ![version: v0.1.46](https://img.shields.io/badge/version-v0.1.46-green.svg) [![license: GPL v3](https://img.shields.io/badge/license-GPL%20v3-blue.svg)](http://www.gnu.org/licenses/gpl-3.0)
 `fflite` is [FFmpeg](https://www.ffmpeg.org/) wrapper for minimalistic progress visualization while keeping the flexibility of CLI.
 
 ### Apart from less obtrusive CLI output there is added functionality:
 * Estimated encoding time and progress percentage is shown during encoding.
-* Batch execution if `.txt` file, file list `"file1|file2"` or a glob pattern is passed as input file, only one is allowed (`fflite -i *.mp4`).
+* Batch execution if `.txt` filelist, `"list:file1 file2 \"file 3\""` or a glob pattern is passed as input file, only one is allowed (`fflite -i *.mp4`).
 * Once the first input file is specified input and output files can be named using `[prefix?]old::new` pattern. This will take the first input name and replace `old` string with the `new` string. If `?` is present, everything before `?` will be used as a prefix for new filenames (`fflite -i film_video.mp4 -i folder?video.mp4::audio.ac3`).
 * Command presets for less typing.
 * Error logging.

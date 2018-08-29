@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"encoding/csv"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -30,7 +31,8 @@ func help() {
 	consolePrint("\n\x1b[33;1mUsage:\x1b[0m\n")
 	consolePrint("    It uses the same syntax as FFmpeg:\n\n")
 	consolePrint("    fflite [fflite_option] [global_options] {[input_file_options] -i input_file} ... {[output_file_options] output_file} ...\n\n")
-	consolePrint("    For batch execution pass \".txt\" file or a glob pattern as input.\n")
+	consolePrint("    For batch execution pass \".txt\" filelist, \"list:file1 file2 \"file 3\"\" or a glob pattern as input.\n")
+	consolePrint("    Once the first input file is specified input and output files can be named using `[prefix?]old::new` pattern. This will take the first input name and replace `old` string with the `new` string. If `?` is present, everything before `?` will be used as a prefix for new filenames (`fflite -i film_video.mp4 -i folder?video.mp4::audio.ac3`).\n")
 	consolePrint("    Preset arguments are replaced with specific strings.\n")
 	consolePrint("\n\x1b[33;1mOptions:\x1b[0m\n")
 	consolePrint("    ffmpeg       original ffmpeg text output\n")
@@ -233,9 +235,19 @@ func sliceFromFileOrGlob(input string, batchFile bool) ([]string, error) {
 	if batchFile {
 		return readLines(input)
 	}
-	if strings.ContainsAny(input, "|") {
-		return strings.Split(input, "|"), nil
+
+	if strings.HasPrefix(input, "list:") {
+		input = strings.Replace(input, "list:", "", 1)
+		input = strings.TrimSpace(input)
+		r := csv.NewReader(strings.NewReader(input))
+		r.Comma = ' '
+		fields, err := r.Read()
+		if err != nil {
+			return []string{}, err
+		}
+		return fields, nil
 	}
+
 	return filepath.Glob(input)
 }
 

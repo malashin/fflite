@@ -14,7 +14,7 @@ import (
 )
 
 // Global variables.
-var version = "v0.1.45"
+var version = "v0.1.46"
 var presets = map[string]string{
 	`^\@crf(\d+)$`:   "-an -vcodec libx264 -preset medium -crf ${1} -pix_fmt yuv420p -g 0 -map_metadata -1 -map_chapters -1",
 	`^\@ac(\d+)$`:    "-vn -acodec ac3 -ab ${1}k -map_metadata -1 -map_chapters -1",
@@ -108,7 +108,7 @@ func main() {
 					consolePrint("\x1b[31;1mOnly one .txt file or glob pattern is allowed for batch execution.\x1b[0m\n")
 					os.Exit(1)
 				}
-			} else if (args[i] == "-i") && (strings.ContainsAny(args[i+1], "|")) {
+			} else if (args[i] == "-i") && (strings.HasPrefix(args[i+1], "list:")) {
 				batchInputName = args[i+1]
 				isBatchInputFile = false
 			}
