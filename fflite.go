@@ -14,7 +14,7 @@ import (
 )
 
 // Global variables.
-var version = "v0.1.47"
+var version = "v0.1.48"
 var presets = map[string]string{
 	`^\@crf(\d+)$`:   "-an -vcodec libx264 -preset medium -crf ${1} -pix_fmt yuv420p -g 0 -map_metadata -1 -map_chapters -1",
 	`^\@ac(\d+)$`:    "-vn -acodec ac3 -ab ${1}k -map_metadata -1 -map_chapters -1",
@@ -35,7 +35,7 @@ var regexpMap = map[string]*regexp.Regexp{
 	"duration":         regexp.MustCompile(`.*(Duration.*)`),
 	"durationHHMMSSMS": regexp.MustCompile(`.*Duration: (\d{2}\:\d{2}\:\d{2}\.\d{2}).*`),
 	"stream":           regexp.MustCompile(`.*Stream #(\d+\:\d+)(.*?)\: (.*)`),
-	"errors":           regexp.MustCompile(`(.*No such file.*|.*Invalid data.*|.*Unrecognized option.*|.*Option not found.*|.*matches no streams.*|.*not supported.*|.*Invalid argument.*|.*Error.*|.*not exist.*|.*-vf\/-af\/-filter.*|.*No such filter.*|.*does not contain.*|.*Not overwriting - exiting.*|.*denied.*|.*\[y\/N\].*|.*Trailing options were found on the commandline.*|.*unconnected output.*|.*Cannot create the link.*|.*Media type mismatch.*|.*moov atom not found.|.*Cannot find a matching stream.*|.*Unknown encoder.*|.*experimental codecs are not enabled.*|.*Alternatively use the non experimental encoder.*|.*Failed to configure.*|.*do not match the corresponding output.*|.*cannot be used together.*|.*Invalid out channel name.*|.*Protocol not found.*|.*Invalid loglevel.*|\"quiet\"|\"panic\"|\"fatal\"|\"error\"|\"warning\"|\"info\"|\"verbose\"|\"debug\"|\"trace\"|.*Unable to parse.*|.*already exists. Exiting.*|.*unable to load.*|.*\, line \d+\).*|.*error.*|.*Too many inputs specified.*|.*Import: couldn't open.*)`),
+	"errors":           regexp.MustCompile(`(.*No such file.*|.*Invalid data.*|.*Unrecognized option.*|.*Option not found.*|.*matches no streams.*|.*not supported.*|.*Invalid argument.*|.*Error.*|.*not exist.*|.*-vf\/-af\/-filter.*|.*No such filter.*|.*does not contain.*|.*Not overwriting - exiting.*|.*denied.*|.*\[y\/N\].*|.*Trailing options were found on the commandline.*|.*unconnected output.*|.*Cannot create the link.*|.*Media type mismatch.*|.*moov atom not found.|.*Cannot find a matching stream.*|.*Unknown encoder.*|.*experimental codecs are not enabled.*|.*Alternatively use the non experimental encoder.*|.*Failed to configure.*|.*do not match the corresponding output.*|.*cannot be used together.*|.*Invalid out channel name.*|.*Protocol not found.*|.*Invalid loglevel.*|\"quiet\"|\"panic\"|\"fatal\"|\"error\"|\"warning\"|\"info\"|\"verbose\"|\"debug\"|\"trace\"|.*Unable to parse.*|.*already exists. Exiting.*|.*unable to load.*|.*\, line \d+\).*|.*error.*|.*Too many inputs specified.*|.*Import: couldn't open.*|.*failed.*|.*No channel layout for.*)`),
 	"warnings":         regexp.MustCompile(`(.*Warning:.*|.*Past duration.*too large.*|.*Starting second pass.*|.*At least one output file must be specified.*|.*fontselect:.*|.*Bitrate .* is extremely low, maybe you mean.*|.*parameter is set too low.*|.*Opening.*for reading.*)`),
 	"encoding":         regexp.MustCompile(`.*(time=.*) bitrate=.*(?:\/s|N\/A)(?: |.*)(dup=.*)* *(speed=.*x) *`),
 	"encodingNoSpeed":  regexp.MustCompile(`.*(time=.*) bitrate=.*(?:\/s|N\/A)(?: |.*)(dup=.*)* *`),
