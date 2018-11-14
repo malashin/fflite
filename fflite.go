@@ -14,11 +14,12 @@ import (
 )
 
 // Global variables.
-var version = "v0.1.49"
+var version = "v0.1.50"
 var presets = map[string]string{
 	`^\@crf(\d+)$`:   "-an -vcodec libx264 -preset medium -crf ${1} -pix_fmt yuv420p -g 0 -map_metadata -1 -map_chapters -1",
 	`^\@ac(\d+)$`:    "-vn -acodec ac3 -ab ${1}k -map_metadata -1 -map_chapters -1",
 	`^\@flac(\d+)$`:  "-vn -acodec flac -compression_level ${1} -map_metadata -1 -map_chapters -1",
+	`^\@alac(\d+)$`:  "-vn -acodec alac -compression_level ${1} -map_metadata -1 -map_chapters -1",
 	`^\@nometa$`:     "-map_metadata -1 -map_chapters -1",
 	`^\@check(\d+)$`: "-map ${1} -scodec srt -f null NUL",
 	`^\@jpg$`:        "-q:v 0 -pix_fmt rgb24 -map_metadata -1",
