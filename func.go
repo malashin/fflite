@@ -116,7 +116,7 @@ func dropCR(data []byte) []byte {
 	return data
 }
 
-// hhmmssmsToSeconds converts timecode (HH:MM:SS.MS) to seconds (SS.MS).
+// hhmmssmsToSeconds converts timecode (H:M:S.MS) to seconds float64 (S.MS).
 func hhmmssmsToSeconds(hhmmssms string) float64 {
 	var hh, mm, ss, ms float64
 	var buffer string
@@ -125,6 +125,7 @@ func hhmmssmsToSeconds(hhmmssms string) float64 {
 
 	for i := length - 1; i >= 0; i-- {
 		if hhmmssms[i] == '.' {
+			buffer = "." + buffer
 			ms, _ = strconv.ParseFloat(buffer, 64)
 			buffer = ""
 		} else if hhmmssms[i] == ':' {
@@ -154,7 +155,7 @@ func hhmmssmsToSeconds(hhmmssms string) float64 {
 		hh, _ = strconv.ParseFloat(timecode[2], 64)
 	}
 
-	return hh*3600 + mm*60 + ss + ms/100
+	return hh*3600 + mm*60 + ss + ms
 }
 
 // round rounds floats into integer numbers.
