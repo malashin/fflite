@@ -498,6 +498,9 @@ func getUpstreamVersion() string {
 
 func updateVersion() error {
 	upstreamVersion := getUpstreamVersion()
+	if upstreamVersion == "" {
+		return nil
+	}
 	if version == upstreamVersion {
 		consolePrint("fflite version \x1b[32;1m" + version + "\x1b[0m.\n")
 		consolePrint("\x1b[32;1mYour fflite is up to date.\x1b[0m\n")
