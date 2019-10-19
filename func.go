@@ -33,6 +33,7 @@ func help() {
 	consolePrint("    fflite [fflite_option] [global_options] {[input_file_options] -i input_file} ... {[output_file_options] output_file} ...\n\n")
 	consolePrint("    For batch execution pass \".txt\" filelist, \"list:file1 file2 \"file 3\"\" or a glob pattern as input.\n")
 	consolePrint("    Once the first input file is specified input and output files can be named using `[prefix?]old::new` pattern. This will take the first input name and replace `old` string with the `new` string. If `?` is present, everything before `?` will be used as a prefix for new filenames (`fflite -i film_video.mp4 -i folder?video.mp4::audio.ac3`).\n")
+	consolePrint("    Input ranges can be passed to -filter_complex. \"[0-1:1]\" becomes \"[0:1][1:1]\"; \"[0:0-1]\" becomes \"[0:0][0:1]\"; \"[0-1:2-3]\" becomes \"[0:2][0:3][1:2][1:3]\" and so on. Example: \"-filter_complex [0:1-6]amerge=inputs=6[a]\" becomes \"-filter_complex [0:1][0:2][0:3][0:4][0:5][0:6]amerge=inputs=6[a]\".\n")
 	consolePrint("    Preset arguments are replaced with specific strings.\n")
 	consolePrint("\n\x1b[33;1mOptions:\x1b[0m\n")
 	consolePrint("    ffmpeg       original ffmpeg text output\n")
@@ -727,6 +728,161 @@ func audioSync(args []string, batchMode bool) (errors []string, input2 string) {
 		"-1",
 		basename + "_SYNC.flac"}, batchMode, false, false)
 	return
+}
+
+// "filterMapRange1":  regexp.MustCompile(`\[(\d+)-(\d+):(\d+)\]`),
+// "filterMapRange2":  regexp.MustCompile(`\[(\d+):(\d+)-(\d+)\]`),
+func convertFilterComplexInputs(in string) (string, error) {
+	if regexpMap["filterMapRange1"].MatchString(in) {
+		maps := regexpMap["filterMapRange1"].FindAllString(in, -1)
+		for _, a := range maps {
+			b := regexpMap["filterMapRange1"].FindStringSubmatch(a)
+
+			input1, err := strconv.Atoi(b[1])
+			if err != nil {
+				return "", err
+			}
+			input2, err := strconv.Atoi(b[2])
+			if err != nil {
+				return "", err
+			}
+			track, err := strconv.Atoi(b[3])
+			if err != nil {
+				return "", err
+			}
+
+			if input1 == input2 {
+				continue
+			}
+
+			c := ""
+			if input1 < input2 {
+				for i := input1; i <= input2; i++ {
+					c += "[" + strconv.Itoa(i) + ":" + strconv.Itoa(track) + "]"
+				}
+				in = strings.ReplaceAll(in, b[0], c)
+				continue
+			}
+
+			if input1 > input2 {
+				for i := input1; i >= input2; i-- {
+					c += "[" + strconv.Itoa(i) + ":" + strconv.Itoa(track) + "]"
+				}
+				in = strings.ReplaceAll(in, b[0], c)
+				continue
+			}
+		}
+	}
+
+	if regexpMap["filterMapRange2"].MatchString(in) {
+		maps := regexpMap["filterMapRange2"].FindAllString(in, -1)
+		for _, a := range maps {
+			b := regexpMap["filterMapRange2"].FindStringSubmatch(a)
+
+			input, err := strconv.Atoi(b[1])
+			if err != nil {
+				return "", err
+			}
+			track1, err := strconv.Atoi(b[2])
+			if err != nil {
+				return "", err
+			}
+			track2, err := strconv.Atoi(b[3])
+			if err != nil {
+				return "", err
+			}
+
+			if track1 == track2 {
+				continue
+			}
+
+			c := ""
+			if track1 < track2 {
+				for t := track1; t <= track2; t++ {
+					c += "[" + strconv.Itoa(input) + ":" + strconv.Itoa(t) + "]"
+				}
+				in = strings.ReplaceAll(in, b[0], c)
+				continue
+			}
+
+			if track1 > track2 {
+				for t := track1; t >= track2; t-- {
+					c += "[" + strconv.Itoa(input) + ":" + strconv.Itoa(t) + "]"
+				}
+				in = strings.ReplaceAll(in, b[0], c)
+				continue
+			}
+		}
+	}
+
+	if regexpMap["filterMapRange3"].MatchString(in) {
+		maps := regexpMap["filterMapRange3"].FindAllString(in, -1)
+		for _, a := range maps {
+			b := regexpMap["filterMapRange3"].FindStringSubmatch(a)
+
+			input1, err := strconv.Atoi(b[1])
+			if err != nil {
+				return "", err
+			}
+			input2, err := strconv.Atoi(b[2])
+			if err != nil {
+				return "", err
+			}
+			track1, err := strconv.Atoi(b[3])
+			if err != nil {
+				return "", err
+			}
+			track2, err := strconv.Atoi(b[4])
+			if err != nil {
+				return "", err
+			}
+
+			if input1 == input2 && track1 == track2 {
+				continue
+			}
+
+			c := ""
+			if input1 < input2 {
+				for i := input1; i <= input2; i++ {
+					if track1 < track2 {
+						for t := track1; t <= track2; t++ {
+							c += "[" + strconv.Itoa(i) + ":" + strconv.Itoa(t) + "]"
+						}
+						continue
+					}
+					if track1 > track2 {
+						for t := track1; t >= track2; t-- {
+							c += "[" + strconv.Itoa(i) + ":" + strconv.Itoa(t) + "]"
+						}
+						continue
+					}
+				}
+				in = strings.ReplaceAll(in, b[0], c)
+				continue
+			}
+
+			if input1 > input2 {
+				for i := input1; i >= input2; i-- {
+					if track1 < track2 {
+						for t := track1; t <= track2; t++ {
+							c += "[" + strconv.Itoa(i) + ":" + strconv.Itoa(t) + "]"
+						}
+						continue
+					}
+					if track1 > track2 {
+						for t := track1; t >= track2; t-- {
+							c += "[" + strconv.Itoa(i) + ":" + strconv.Itoa(t) + "]"
+						}
+						continue
+					}
+				}
+				in = strings.ReplaceAll(in, b[0], c)
+				continue
+			}
+		}
+	}
+
+	return in, nil
 }
 
 // encodeFile starts ffmpeg command with passed arguments in ffCommand []string array.

@@ -14,7 +14,8 @@ import (
 )
 
 // Global variables.
-var version = "v0.1.53"
+var version = "v0.1.54"
+
 var presets = map[string]string{
 	`^\@crf(\d+)$`:   "-an -vcodec libx264 -preset medium -crf ${1} -pix_fmt yuv420p -g 0 -map_metadata -1 -map_chapters -1",
 	`^\@ac(\d+)$`:    "-vn -acodec ac3 -ab ${1}k -map_metadata -1 -map_chapters -1",
@@ -28,6 +29,7 @@ var presets = map[string]string{
 	`^\@dcpcrop$`:    "-loglevel error -stats -an -vcodec libx264 -preset medium -crf 10 -pix_fmt yuv420p -g 0 -vf crop=1920:ih:(iw-1920)/2:0,pad=1920:1080:0:(oh-ih)/2,setsar=1/1 -map_metadata -1 -map_chapters -1",
 	`^\@sdpal$`:      "-vf scale=720:576,setsar=64/45,unsharp=3:3:0.3:3:3:0",
 }
+
 var regexpMap = map[string]*regexp.Regexp{
 	"streamMapping":    regexp.MustCompile(`Stream mapping:`),
 	"encodingFinished": regexp.MustCompile(`.*video:.*audio:.*subtitle:.*global headers:.*`),
@@ -46,6 +48,9 @@ var regexpMap = map[string]*regexp.Regexp{
 	"crop":             regexp.MustCompile(`.*cropdetect.*(crop=(-?\d+):(-?\d+):(-?\d+):(-?\d+)).*`),
 	"cropMode":         regexp.MustCompile(`crop(.*)`),
 	"fileNameReplace":  regexp.MustCompile(`^(?:(.*)(?:\?))?(.*)\:\:(.*)$`),
+	"filterMapRange1":  regexp.MustCompile(`\[(\d+)-(\d+):(\d+)\]`),
+	"filterMapRange2":  regexp.MustCompile(`\[(\d+):(\d+)-(\d+)\]`),
+	"filterMapRange3":  regexp.MustCompile(`\[(\d+)-(\d+):(\d+)-(\d+)\]`),
 }
 
 var singlekeys = []string{"-L", "-version", "-buildconf", "-formats", "-muxers", "-demuxers", "-devices", "-codecs", "-decoders", "-encoders", "-bsfs", "-protocols", "-filters", "-pix_fmts", "-layouts", "-sample_fmts", "-colors", "-hwaccels", "-report", "-y", "-n", "-ignore_unknown", "-filter_threads", "-filter_complex_threads", "-stats", "-copy_unknown", "-benchmark", "-benchmark_all", "-stdin", "-dump", "-hex", "-vsync", "-frame_drop_threshold", "-async", "-copyts", "-start_at_zero", "-debug_ts", "-intra", "-sameq", "-same_quant", "-deinterlace", "-psnr", "-vstats", "-vstats_version", "-qphist", "-hwaccel_lax_profile_check", "-isync", "-override_ffserver", "-seek_timestamp", "-apad", "-reinit_filter", "-discard", "-disposition", "-accurate_seek", "-re", "-shortest", "-copyinkf", "-copypriorss", "-thread_queue_size", "-find_stream_info", "-autorotate", "-vn", "-dn", "-intra", "-sameq", "-same_quant", "-deinterlace", "-psnr", "-vstats", "-vstats_version", "-top", "-qphist", "-force_fps", "-an", "-guess_layout_max", "-sn", "-fix_sub_duration"}
@@ -60,6 +65,7 @@ func main() {
 	var sigint, ffmpeg, nologs, crop, sync, mute, isBatchInputFile bool
 	var cropDetectNumber int
 	var cropDetectLimit float64
+
 	// Intercept interrupt signal
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
@@ -67,10 +73,12 @@ func main() {
 		<-c
 		sigint = true
 	}()
+
 	// Check if programs output is terminal.
 	if !terminal.IsTerminal(int(os.Stdout.Fd())) {
 		isTerminal = false
 	}
+
 	// Convert passed arguments into array.
 	args := os.Args[1:]
 	// If program is executed without arguments.
@@ -79,15 +87,19 @@ func main() {
 		help()
 		os.Exit(0)
 	}
+
 	ffmpeg, nologs, crop, cropDetectNumber, cropDetectLimit, sync, mute, args = parseOptions(args)
+
 	// Create slice containing arguments of ffmpeg command.
 	ffCommand := []string{}
+
 	// Parse all arguments and apply presets if needed.
 	for i := 0; i < len(args); i++ {
 		if i+1 < len(args) {
 			if (args[i] == "-i") && (firstInput == "") {
 				firstInput = args[i+1]
 			}
+
 			if (args[i] == "-i") && (strings.HasSuffix(args[i+1], ".txt")) {
 				if batchInputName == "" {
 					batchInputName = args[i+1]
@@ -113,9 +125,20 @@ func main() {
 				batchInputName = args[i+1]
 				isBatchInputFile = false
 			}
+
+			// Convert -filter_complex inputs from [0-1:1] to [0:1][1:1] or [0:0-1] to [0:0][0:1] or [0-1:2-3] to [0:2][0:3][1:2][1:3].
+			if args[i] == "-filter_complex" {
+				f, err := convertFilterComplexInputs(args[i+1])
+				if err != nil {
+					consolePrint("\x1b[31;1convertFilterComplexInputs: " + err.Error() + "\x1b[0m\n")
+					os.Exit(1)
+				}
+				args[i+1] = f
+			}
 		}
 		ffCommand = append(ffCommand, argsPreset(args[i])...)
 	}
+
 	// If .txt file or glob pattern is passed as input start batch process.
 	// Input will be replaced with each line from that file.
 	if batchInputName != "" {
