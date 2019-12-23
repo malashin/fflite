@@ -39,7 +39,8 @@ func help() {
 	consolePrint("    ffmpeg       original ffmpeg text output\n")
 	consolePrint("    version      print fflite version and check for updates\n")
 	consolePrint("    update       update fflite version using \"go get\"\n")
-	consolePrint("    nologs       do not create \".err\" error log files\n")
+	consolePrint("    nologs       do not create \".#err\" error log files\n")
+	consolePrint("    cwdlogs      save \".#err\" error log files in the current work directory\n")
 	consolePrint("    crop         audomated cropDetect module \"fflite crop[crop_number:crop_limit] -i input_file\"\n")
 	consolePrint("    sync         sync 2nd input audio files duration to the duration on the first input \"fflite sync -i input_file -i input_file\"\n")
 	consolePrint("    mute         removes bell sound at the end of ecoding\n")
@@ -527,7 +528,7 @@ func updateVersion() error {
 	return nil
 }
 
-func parseOptions(input []string) (ffmpeg bool, nologs bool, crop bool, cropDetectNumber int, cropDetectLimit float64, sync bool, mute bool, args []string) {
+func parseOptions(input []string) (ffmpeg bool, nologs bool, cwdlogs bool, crop bool, cropDetectNumber int, cropDetectLimit float64, sync bool, mute bool, args []string) {
 	switch {
 	// "ffmpeg" run the same command in ffmpeg instead of fflite.
 	case input[0] == "ffmpeg":
@@ -536,6 +537,10 @@ func parseOptions(input []string) (ffmpeg bool, nologs bool, crop bool, cropDete
 	// "nologs" don't save error log files.
 	case input[0] == "nologs":
 		nologs = true
+		args = input[1:]
+	// "cwdlogs" save error log files in the current work directory.
+	case input[0] == "cwdlogs":
+		cwdlogs = true
 		args = input[1:]
 	// "crop" runs cropDetect on input file.
 	case regexpMap["cropMode"].MatchString(input[0]):

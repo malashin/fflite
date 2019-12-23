@@ -14,7 +14,7 @@ import (
 )
 
 // Global variables.
-var version = "v0.1.54"
+var version = "v0.1.56"
 
 var presets = map[string]string{
 	`^\@crf(\d+)$`:   "-an -vcodec libx264 -preset medium -crf ${1} -pix_fmt yuv420p -g 0 -map_metadata -1 -map_chapters -1",
@@ -38,7 +38,7 @@ var regexpMap = map[string]*regexp.Regexp{
 	"duration":         regexp.MustCompile(`.*(Duration.*)`),
 	"durationHHMMSSMS": regexp.MustCompile(`.*Duration: (\d{2}\:\d{2}\:\d{2}\.\d{2}).*`),
 	"stream":           regexp.MustCompile(`.*Stream #(\d+\:\d+)(.*?)\: (.*)`),
-	"errors":           regexp.MustCompile(`(.*No such file.*|.*Invalid data.*|.*Unrecognized option.*|.*Option not found.*|.*matches no streams.*|.*not supported.*|.*Invalid argument.*|.*Error.*|.*not exist.*|.*-vf\/-af\/-filter.*|.*No such filter.*|.*does not contain.*|.*Not overwriting - exiting.*|.*denied.*|.*\[y\/N\].*|.*Trailing options were found on the commandline.*|.*unconnected output.*|.*Cannot create the link.*|.*Media type mismatch.*|.*moov atom not found.|.*Cannot find a matching stream.*|.*Unknown encoder.*|.*experimental codecs are not enabled.*|.*Alternatively use the non experimental encoder.*|.*Failed to configure.*|.*do not match the corresponding output.*|.*cannot be used together.*|.*Invalid out channel name.*|.*Protocol not found.*|.*Invalid loglevel.*|\"quiet\"|\"panic\"|\"fatal\"|\"error\"|\"warning\"|\"info\"|\"verbose\"|\"debug\"|\"trace\"|.*Unable to parse.*|.*already exists. Exiting.*|.*unable to load.*|.*\, line \d+\).*|.*error.*|.*Too many inputs specified.*|.*Import: couldn't open.*|.*failed.*)`),
+	"errors":           regexp.MustCompile(`(.*No such file.*|.*Invalid data.*|.*Unrecognized option.*|.*Option not found.*|.*matches no streams.*|.*not supported.*|.*Invalid argument.*|.*Error.*|.*not exist.*|.*-vf\/-af\/-filter.*|.*No such filter.*|.*does not contain.*|.*Not overwriting - exiting.*|.*denied.*|.*\[y\/N\].*|.*Trailing options were found on the commandline.*|.*unconnected output.*|.*Cannot create the link.*|.*Media type mismatch.*|.*moov atom not found.|.*Cannot find a matching stream.*|.*Unknown encoder.*|.*experimental codecs are not enabled.*|.*Alternatively use the non experimental encoder.*|.*Failed to configure.*|.*do not match the corresponding output.*|.*cannot be used together.*|.*Invalid out channel name.*|.*Protocol not found.*|.*Invalid loglevel.*|\"quiet\"|\"panic\"|\"fatal\"|\"error\"|\"warning\"|\"info\"|\"verbose\"|\"debug\"|\"trace\"|.*Unable to parse.*|.*already exists. Exiting.*|.*unable to load.*|.*\, line \d+\).*|.*error.*|.*Too many inputs specified.*|.*Import: couldn't open.*|.*failed.*|.*Invalid duration specification.*)`),
 	"warnings":         regexp.MustCompile(`(.*Warning:.*|.*Past duration.*too large.*|.*Starting second pass.*|.*At least one output file must be specified.*|.*fontselect:.*|.*Bitrate .* is extremely low, maybe you mean.*|.*parameter is set too low.*|.*Opening.*for reading.*|.*No channel layout for.*|.*Invalid.*index.*|.*EOF timestamp not reliable.*|.*Expected number.*but found.*)`),
 	"encoding":         regexp.MustCompile(`.*(time=.*) bitrate=.*(?:\/s|N\/A)(?: |.*)(dup=.*)* *(speed=.*x) *`),
 	"encodingNoSpeed":  regexp.MustCompile(`.*(time=.*) bitrate=.*(?:\/s|N\/A)(?: |.*)(dup=.*)* *`),
@@ -62,9 +62,15 @@ func main() {
 	// Main variables.
 	var batchInputName, firstInput string
 	var errors, errorsArray []string
-	var sigint, ffmpeg, nologs, crop, sync, mute, isBatchInputFile bool
+	var sigint, ffmpeg, nologs, cwdlogs, crop, sync, mute, isBatchInputFile bool
 	var cropDetectNumber int
 	var cropDetectLimit float64
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		consolePrint("\x1b[31;1os.Getwd(): " + err.Error() + "\x1b[0m\n")
+		os.Exit(1)
+	}
 
 	// Intercept interrupt signal
 	c := make(chan os.Signal, 1)
@@ -88,7 +94,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	ffmpeg, nologs, crop, cropDetectNumber, cropDetectLimit, sync, mute, args = parseOptions(args)
+	ffmpeg, nologs, cwdlogs, crop, cropDetectNumber, cropDetectLimit, sync, mute, args = parseOptions(args)
 
 	// Create slice containing arguments of ffmpeg command.
 	ffCommand := []string{}
@@ -216,10 +222,18 @@ func main() {
 					}
 					errorsArray = append(errorsArray, "\x1b[42;1mINPUT "+strconv.FormatInt(int64(i)+1, 10)+":\x1b[0m\x1b[32;1m "+filename+"\x1b[0m\n")
 					errorsArray = append(errorsArray, errors...)
-					if !nologs {
-						writeStringArrayToFile(file+".#err", []string{"INPUT: " + filename + "\n"}, 0775)
-						writeStringArrayToFile(file+".#err", errors, 0775)
+
+					logpath := firstInput + ".#err"
+					if cwdlogs {
+						logpath = filepath.Join(cwd, filepath.Base(firstInput)) + ".#err"
 					}
+
+					if nologs {
+						continue
+					}
+
+					writeStringArrayToFile(logpath, []string{"INPUT: " + filename + "\n"}, 0775)
+					writeStringArrayToFile(logpath, errors, 0775)
 				}
 			}
 		}
@@ -264,9 +278,20 @@ func main() {
 		if len(errors) > 0 {
 			errorsArray = append(errorsArray, "\x1b[42;1mINPUT:\x1b[0m\x1b[32;1m "+filename+"\x1b[0m\n")
 			errorsArray = append(errorsArray, errors...)
-			if !nologs {
-				writeStringArrayToFile(firstInput+".#err", errorsArray, 0775)
+			if nologs {
+				return
 			}
+
+			logpath := firstInput + ".#err"
+			if cwdlogs {
+				logpath = filepath.Join(cwd, filepath.Base(firstInput)) + ".#err"
+			}
+
+			if nologs {
+				return
+			}
+
+			writeStringArrayToFile(logpath, errorsArray, 0775)
 		}
 	}
 
