@@ -14,7 +14,7 @@ import (
 )
 
 // Global variables.
-var version = "v0.1.57"
+var version = "v0.1.58"
 
 var presets = map[string]string{
 	`^\@crf(\d+)$`:   "-an -vcodec libx264 -preset medium -crf ${1} -pix_fmt yuv420p -g 0 -map_metadata -1 -map_chapters -1",
@@ -197,7 +197,7 @@ func main() {
 						if regexpMap["fileNameReplace"].MatchString(batchCommand[i]) {
 							match := regexpMap["fileNameReplace"].FindStringSubmatch(batchCommand[i])
 							// consolePrint("\nDEBUG:", match, "\n")
-							batchCommand[i] = match[1] + strings.Replace(firstInput, match[2], match[3], -1)
+							batchCommand[i] = match[1] + strings.Replace(filepath.Base(firstInput), match[2], match[3], -1)
 						} else {
 							batchCommand[i] = basename + "_" + batchCommand[i]
 						}
