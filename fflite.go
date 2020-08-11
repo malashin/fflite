@@ -14,7 +14,7 @@ import (
 )
 
 // Global variables.
-var version = "v0.1.58"
+var version = "v0.1.59"
 
 var presets = map[string]string{
 	`^\@crf(\d+)$`:   "-an -vcodec libx264 -preset medium -crf ${1} -pix_fmt yuv420p -g 0 -map_metadata -1 -map_chapters -1",
@@ -38,19 +38,24 @@ var regexpMap = map[string]*regexp.Regexp{
 	"duration":         regexp.MustCompile(`.*(Duration.*)`),
 	"durationHHMMSSMS": regexp.MustCompile(`.*Duration: (\d{2}\:\d{2}\:\d{2}\.\d{2}).*`),
 	"stream":           regexp.MustCompile(`.*Stream #(\d+\:\d+)(.*?)\: (.*)`),
+	"handler":          regexp.MustCompile(`.*handler_name\ +\:\ +(.+)`),
 	"errors":           regexp.MustCompile(`(.*No such file.*|.*Invalid data.*|.*Unrecognized option.*|.*Option not found.*|.*matches no streams.*|.*not supported.*|.*Invalid argument.*|.*Error.*|.*not exist.*|.*-vf\/-af\/-filter.*|.*No such filter.*|.*does not contain.*|.*Not overwriting - exiting.*|.*denied.*|.*\[y\/N\].*|.*Trailing options were found on the commandline.*|.*unconnected output.*|.*Cannot create the link.*|.*Media type mismatch.*|.*moov atom not found.|.*Cannot find a matching stream.*|.*Unknown encoder.*|.*experimental codecs are not enabled.*|.*Alternatively use the non experimental encoder.*|.*Failed to configure.*|.*do not match the corresponding output.*|.*cannot be used together.*|.*Invalid out channel name.*|.*Protocol not found.*|.*Invalid loglevel.*|\"quiet\"|\"panic\"|\"fatal\"|\"error\"|\"warning\"|\"info\"|\"verbose\"|\"debug\"|\"trace\"|.*Unable to parse.*|.*already exists. Exiting.*|.*unable to load.*|.*\, line \d+\).*|.*error.*|.*Too many inputs specified.*|.*Import: couldn't open.*|.*failed.*|.*Invalid duration specification.*)`),
 	"warnings":         regexp.MustCompile(`(.*Warning:.*|.*Past duration.*too large.*|.*Starting second pass.*|.*At least one output file must be specified.*|.*fontselect:.*|.*Bitrate .* is extremely low, maybe you mean.*|.*parameter is set too low.*|.*Opening.*for reading.*|.*No channel layout for.*|.*Invalid.*index.*|.*EOF timestamp not reliable.*|.*Expected number.*but found.*|.*is not an encoding option*)`),
-	"encoding":         regexp.MustCompile(`.*(time=.*) bitrate=.*(?:\/s|N\/A)(?: |.*)(dup=.*)* *(speed=.*x) *`),
-	"encodingNoSpeed":  regexp.MustCompile(`.*(time=.*) bitrate=.*(?:\/s|N\/A)(?: |.*)(dup=.*)* *`),
-	"timeSpeed":        regexp.MustCompile(`.*time=.*?(\d{2}\:\d{2}\:\d{2}\.\d{2}).* speed=.*?(\d+\.\d+|\d+)x`),
-	"currentSecond":    regexp.MustCompile(`.*size=.* time=.*?(\d{2}\:\d{2}\:\d{2}\.\d{2}).*`),
-	"hide":             regexp.MustCompile(`(.*Press \[q\] to stop.*|.*Last message repeated.*)`),
-	"crop":             regexp.MustCompile(`.*cropdetect.*(crop=(-?\d+):(-?\d+):(-?\d+):(-?\d+)).*`),
-	"cropMode":         regexp.MustCompile(`crop(.*)`),
-	"fileNameReplace":  regexp.MustCompile(`^(?:(.*)(?:\?))?(.*)\:\:(.*)$`),
-	"filterMapRange1":  regexp.MustCompile(`\[(\d+)-(\d+):(\d+)\]`),
-	"filterMapRange2":  regexp.MustCompile(`\[(\d+):(\d+)-(\d+)\]`),
-	"filterMapRange3":  regexp.MustCompile(`\[(\d+)-(\d+):(\d+)-(\d+)\]`),
+
+	// "encoding":         regexp.MustCompile(`.*(time=.*) bitrate=.*(?:\/s|N\/A)(?: |.*)(dup=.*)* *(speed=.*x) *`),
+	// "encodingNoSpeed":  regexp.MustCompile(`.*(time=.*) bitrate=.*(?:\/s|N\/A)(?: |.*)(dup=.*)* *`),
+	"encoding":        regexp.MustCompile(`.*(time=.*) (bitrate=.*(?:\/s|N\/A))(?: |.*)(dup=.*)* *(speed=.*x) *`),
+	"encodingNoSpeed": regexp.MustCompile(`.*(time=.*) (bitrate=.*(?:\/s|N\/A))(?: |.*)(dup=.*)* *`),
+
+	"timeSpeed":       regexp.MustCompile(`.*time=.*?(\d{2}\:\d{2}\:\d{2}\.\d{2}).* speed=.*?(\d+\.\d+|\d+)x`),
+	"currentSecond":   regexp.MustCompile(`.*size=.* time=.*?(\d{2}\:\d{2}\:\d{2}\.\d{2}).*`),
+	"hide":            regexp.MustCompile(`(.*Press \[q\] to stop.*|.*Last message repeated.*)`),
+	"crop":            regexp.MustCompile(`.*cropdetect.*(crop=(-?\d+):(-?\d+):(-?\d+):(-?\d+)).*`),
+	"cropMode":        regexp.MustCompile(`crop(.*)`),
+	"fileNameReplace": regexp.MustCompile(`^(?:(.*)(?:\?))?(.*)\:\:(.*)$`),
+	"filterMapRange1": regexp.MustCompile(`\[(\d+)-(\d+):(\d+)\]`),
+	"filterMapRange2": regexp.MustCompile(`\[(\d+):(\d+)-(\d+)\]`),
+	"filterMapRange3": regexp.MustCompile(`\[(\d+)-(\d+):(\d+)-(\d+)\]`),
 }
 
 var singlekeys = []string{"-L", "-version", "-buildconf", "-formats", "-muxers", "-demuxers", "-devices", "-codecs", "-decoders", "-encoders", "-bsfs", "-protocols", "-filters", "-pix_fmts", "-layouts", "-sample_fmts", "-colors", "-hwaccels", "-report", "-y", "-n", "-ignore_unknown", "-filter_threads", "-filter_complex_threads", "-stats", "-copy_unknown", "-benchmark", "-benchmark_all", "-stdin", "-dump", "-hex", "-vsync", "-frame_drop_threshold", "-async", "-copyts", "-start_at_zero", "-debug_ts", "-intra", "-sameq", "-same_quant", "-deinterlace", "-psnr", "-vstats", "-vstats_version", "-qphist", "-hwaccel_lax_profile_check", "-isync", "-override_ffserver", "-seek_timestamp", "-apad", "-reinit_filter", "-discard", "-disposition", "-accurate_seek", "-re", "-shortest", "-copyinkf", "-copypriorss", "-thread_queue_size", "-find_stream_info", "-autorotate", "-vn", "-dn", "-intra", "-sameq", "-same_quant", "-deinterlace", "-psnr", "-vstats", "-vstats_version", "-top", "-qphist", "-force_fps", "-an", "-guess_layout_max", "-sn", "-fix_sub_duration"}

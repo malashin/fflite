@@ -337,6 +337,27 @@ func parseStream(line string) string {
 	return regexpMap["stream"].ReplaceAllString(line, "    \x1b[36;1m${1}\x1b[0m \x1b[30;1m${2}\x1b[0m ${3}\n")
 }
 
+func parseHandler(line string) string {
+	handler := regexpMap["handler"].ReplaceAllString(line, "${1}")
+
+	hideHandlers := []string{
+		"VideoHandler",
+		"SoundHandler",
+		"DataHandler",
+		"Apple Video Media Handler",
+		"Apple Sound Media Handler",
+		"Time Code Media Handler",
+	}
+
+	if contains(hideHandlers, handler) {
+		line = ""
+	} else {
+		line += "\n"
+	}
+
+	return line
+}
+
 func parseErrors(line string, lastLineFull string, batchMode bool, errorsArray []string) (string, []string) {
 	if (lastLineFull != "") && (lastLineFull[len(lastLineFull)-1]) == '\r' {
 		consolePrint("\n")
@@ -368,7 +389,7 @@ func parseEncoding(line string, lastLineFull string, duration float64, speedArra
 	currentSpeed, _ := strconv.ParseFloat(timeSpeed[1], 64)
 	progress := "N\\A"
 	eta := "N\\A"
-	line = strings.TrimSpace(regexpMap["encoding"].ReplaceAllString(line, "${1} ${3} \x1b[33;1m${2}\x1b[0m"))
+	line = strings.TrimSpace(regexpMap["encoding"].ReplaceAllString(line, "${1} ${2} ${4} \x1b[33;1m${3}\x1b[0m"))
 	if strings.Contains(line, "dup=0 ") {
 		line = strings.Replace(line, "dup=0 ", "", -1)
 	}
@@ -400,7 +421,7 @@ func parseEncodingNoSpeed(line string, lastLineFull string, duration float64, st
 	}
 	progress := "N\\A"
 	eta := "N\\A"
-	line = strings.TrimSpace(regexpMap["encodingNoSpeed"].ReplaceAllString(line, "${1} speed="+strconv.FormatFloat(currentSpeed, 'f', 2, 64)+"x \x1b[33;1m${2}\x1b[0m"))
+	line = strings.TrimSpace(regexpMap["encodingNoSpeed"].ReplaceAllString(line, "${1} ${3} speed="+strconv.FormatFloat(currentSpeed, 'f', 2, 64)+"x \x1b[33;1m${3}\x1b[0m"))
 	if strings.Contains(line, "dup=0 ") {
 		line = strings.Replace(line, "dup=0 ", "", -1)
 	}
@@ -979,6 +1000,8 @@ func encodeFile(ffCommand []string, batchMode, ffmpeg, mute bool) (errorsArray [
 				line, duration = parseDuration(line)
 			case regexpMap["stream"].MatchString(line):
 				line = parseStream(line)
+			case regexpMap["handler"].MatchString(line):
+				line = parseHandler(line)
 			case regexpMap["warnings"].MatchString(line):
 				line, warningArray = parseWarnings(line, lastLineFull, warningArray, warningSpam)
 			case regexpMap["hide"].MatchString(line):
