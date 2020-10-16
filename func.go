@@ -340,15 +340,6 @@ func parseStream(line string) string {
 func parseHandler(line string) string {
 	handler := regexpMap["handler"].ReplaceAllString(line, "${1}")
 
-	hideHandlers := []string{
-		"VideoHandler",
-		"SoundHandler",
-		"DataHandler",
-		"Apple Video Media Handler",
-		"Apple Sound Media Handler",
-		"Time Code Media Handler",
-	}
-
 	if contains(hideHandlers, handler) {
 		line = ""
 	} else {

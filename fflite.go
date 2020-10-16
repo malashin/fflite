@@ -14,7 +14,7 @@ import (
 )
 
 // Global variables.
-var version = "v0.1.59"
+var version = "v0.1.60"
 
 var presets = map[string]string{
 	`^\@crf(\d+)$`:   "-an -vcodec libx264 -preset medium -crf ${1} -pix_fmt yuv420p -g 0 -map_metadata -1 -map_chapters -1",
@@ -22,7 +22,7 @@ var presets = map[string]string{
 	`^\@flac(\d+)$`:  "-vn -acodec flac -compression_level ${1} -map_metadata -1 -map_chapters -1",
 	`^\@alac(\d+)$`:  "-vn -acodec alac -compression_level ${1} -map_metadata -1 -map_chapters -1",
 	`^\@nometa$`:     "-map_metadata -1 -map_chapters -1",
-	`^\@check(\d+)$`: "-map ${1} -scodec srt -f null NUL",
+	`^\@check(\d+)$`: "-map ${1} -scodec srt -dcodec copy -f null NUL",
 	`^\@jpg$`:        "-q:v 0 -pix_fmt rgb24 -map_metadata -1",
 	`^\@dcpscale$`:   "-loglevel error -stats -an -vcodec libx264 -preset medium -crf 10 -pix_fmt yuv420p -g 0 -vf scale=1920:-2,pad=1920:1080:0:(oh-ih)/2,setsar=1/1 -map_metadata -1 -map_chapters -1",
 	`^\@dcpscale2$`:  "-loglevel error -stats -an -vcodec libx264 -preset medium -crf 10 -pix_fmt yuv420p -g 0 -vf scale=1920:-2,setsar=1/1 -map_metadata -1 -map_chapters -1",
@@ -59,6 +59,19 @@ var regexpMap = map[string]*regexp.Regexp{
 }
 
 var singlekeys = []string{"-L", "-version", "-buildconf", "-formats", "-muxers", "-demuxers", "-devices", "-codecs", "-decoders", "-encoders", "-bsfs", "-protocols", "-filters", "-pix_fmts", "-layouts", "-sample_fmts", "-colors", "-hwaccels", "-report", "-y", "-n", "-ignore_unknown", "-filter_threads", "-filter_complex_threads", "-stats", "-copy_unknown", "-benchmark", "-benchmark_all", "-stdin", "-dump", "-hex", "-vsync", "-frame_drop_threshold", "-async", "-copyts", "-start_at_zero", "-debug_ts", "-intra", "-sameq", "-same_quant", "-deinterlace", "-psnr", "-vstats", "-vstats_version", "-qphist", "-hwaccel_lax_profile_check", "-isync", "-override_ffserver", "-seek_timestamp", "-apad", "-reinit_filter", "-discard", "-disposition", "-accurate_seek", "-re", "-shortest", "-copyinkf", "-copypriorss", "-thread_queue_size", "-find_stream_info", "-autorotate", "-vn", "-dn", "-intra", "-sameq", "-same_quant", "-deinterlace", "-psnr", "-vstats", "-vstats_version", "-top", "-qphist", "-force_fps", "-an", "-guess_layout_max", "-sn", "-fix_sub_duration"}
+
+var hideHandlers = []string{
+	"VideoHandler",
+	"SoundHandler",
+	"DataHandler",
+	"Apple Video Media Handler",
+	"Apple Sound Media Handler",
+	"Apple Alias Data Handler",
+	"Time Code Media Handler",
+	"Core Media Video",
+	"Core Media Audio",
+	"Core Media Time Code",
+}
 
 var isTerminal = true
 var exitStatus = 0
