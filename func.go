@@ -32,7 +32,7 @@ func help() {
 	consolePrint("    It uses the same syntax as FFmpeg:\n\n")
 	consolePrint("    fflite [fflite_option] [global_options] {[input_file_options] -i input_file} ... {[output_file_options] output_file} ...\n\n")
 	consolePrint("    For batch execution pass \".txt\" filelist, \"list:file1 file2 \"file 3\"\" or a glob pattern as input.\n")
-	consolePrint("    Once the first input file is specified input and output files can be named using `[prefix?]old::new` pattern. This will take the first input name and replace `old` string with the `new` string. If `?` is present, everything before `?` will be used as a prefix for new filenames (`fflite -i film_video.mp4 -i folder?video.mp4::audio.ac3`).\n")
+	consolePrint("    Once the first input file is specified input and output files can be named using `[prefix?]old::new` pattern. This will take the first input name and replace `old` string with the `new` string. If `?` is present, everything before `?` will be used as a prefix for new filenames (`fflite -i film_video.mp4 -map 0:a folder?video.mp4::audio.ac3`).\n")
 	consolePrint("    Input ranges can be passed to -filter_complex. \"[0-1:1]\" becomes \"[0:1][1:1]\"; \"[0:0-1]\" becomes \"[0:0][0:1]\"; \"[0-1:2-3]\" becomes \"[0:2][0:3][1:2][1:3]\" and so on. Example: \"-filter_complex [0:1-6]amerge=inputs=6[a]\" becomes \"-filter_complex [0:1][0:2][0:3][0:4][0:5][0:6]amerge=inputs=6[a]\".\n")
 	consolePrint("    Preset arguments are replaced with specific strings.\n")
 	consolePrint("\n\x1b[33;1mOptions:\x1b[0m\n")
