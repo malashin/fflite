@@ -537,7 +537,8 @@ func updateVersion() error {
 	for scanner.Scan() {
 		consolePrint(scanner.Text() + "\n")
 	}
-	return nil
+	err = cmd.Wait()
+	return err
 }
 
 func parseOptions(input []string) (ffmpeg bool, nologs bool, cwdlogs bool, crop bool, cropDetectNumber int, cropDetectLimit float64, sync bool, mute bool, args []string) {
